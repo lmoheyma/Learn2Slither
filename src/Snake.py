@@ -1,38 +1,129 @@
 import tkinter as tk
 import random
+from Food import Food
+
+behavior_colors = {
+    'good': 'green',
+    'bad': 'red'
+}
 
 class Snake:
     def __init__(self, master, width=400, height=400,
-                 good_food=2, bad_food=2):
+                 nb_good_food=2, nb_bad_food=1):
         self.master = master
+        self.width = width
+        self.height = height
+        self.node_size = 40
         self.canvas = tk.Canvas(master, width=width, height=height, bg='black')
         self.canvas.pack()
-        self.snake = self.init_snake(width, height)
-        self.foods = self.create_food(good_food, bad_food)
+        self.snake = self.init_snake()
+        self.foods = self.create_foods(nb_good_food, nb_bad_food)
+        self.direction = 'Left'
+        self.game_over = False
 
-    def init_snake(self, width, height):
-        snake_head_x = random.randint(3, width-3)
-        snake_head_y = random.randint(3, height-3)
+        master.bind('<Up>', lambda event: self.change_direction('Up'))
+        master.bind('<Down>', lambda event: self.change_direction('Down'))
+        master.bind('<Left>', lambda event: self.change_direction('Left'))
+        master.bind('<Right>', lambda event: self.change_direction('Right'))
+
+        self.game_loop()
+
+    def init_snake(self):
+        snake_head_x = random.randint(0, (self.width//self.node_size)-1) * self.node_size
+        snake_head_y = random.randint(0, (self.width//self.node_size)-1) * self.node_size
         snake = [[snake_head_x, snake_head_y]]
-        for i in range(2):
-            new_node = [snake[-1][0]+1, snake[-1][1]]
+        for _ in range(2):
+            new_node = [snake[-1][0]+self.node_size, snake[-1][1]]
             snake.append(new_node)
         return snake
 
     def check_collision(self):
-        pass
+        if self.snake[0][0] > self.width or self.snake[0][0] < 0:
+            self.game_over = True
+        if self.snake[0][1] > self.height or self.snake[0][1] < 0:
+            self.game_over = True
+        for node in self.snake[1:]:
+            if node == self.snake[0]:
+                self.game_over = True
 
-    def create_food(self, good_food=True):
-        pass
+    def check_food(self):
+        for food in self.foods:
+            if self.snake[0] == food:
+                self.foods.remove(food)
+                self.canvas.delete(f'food{food.index}')
+                if food.behavior == 'good':
+                    self.append_node()
+                else:
+                    self.canvas.delete(self.snake[-1])
+                    self.snake.pop()
+                self.foods.append(self.create_one_food(self.foods[-1].index+1, food.behavior))
+
+    def create_one_food(self, index, behavior='good'):
+        food = Food(self.width, self.height, self.node_size, index, behavior)
+        self.canvas.create_rectangle(food.x, food.y, food.x+self.node_size,
+                                     food.y+self.node_size, fill=behavior_colors[behavior],
+                                     tags=f'food{index}')
+        return food
+
+    def create_foods(self, nb_good_food, nb_bad_food):
+        foods = []
+        i = 0
+        for _ in range(nb_good_food): # Green food
+            foods.append(self.create_one_food(index=i))
+            i+=1
+        for _ in range(nb_bad_food): # Red food
+            foods.append(self.create_one_food(index=i, behavior='bad'))
+            i+=1
+        return foods
 
     def draw_snake(self):
-        pass
+        self.canvas.delete('snake')
+        for node in self.snake:
+            self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='white', tags='snake')
 
+    def append_node(self):
+        if self.direction == 'Up':
+            self.snake.append([self.snake[-1][0], self.snake[-1][1]+self.node_size])
+        elif self.direction == 'Right':
+            self.snake.append([self.snake[-1][0]-self.node_size, self.snake[-1][1]])
+        elif self.direction == 'Down':
+            self.snake.append([self.snake[-1][0], self.snake[-1][1]-self.node_size])
+        elif self.direction == 'Left':
+            self.snake.append([self.snake[-1][0]+self.node_size, self.snake[-1][1]])
+    
+    
     def move_snake(self):
-        pass
+        if self.direction == 'Up':
+            self.snake.insert(0, [self.snake[0][0], self.snake[0][1]-self.node_size])
+        elif self.direction == 'Right':
+            self.snake.insert(0, [self.snake[0][0]+self.node_size, self.snake[0][1]])
+        elif self.direction == 'Down':
+            self.snake.insert(0, [self.snake[0][0], self.snake[0][1]+self.node_size])
+        elif self.direction == 'Left':
+            self.snake.insert(0, [self.snake[0][0]-self.node_size, self.snake[0][1]])
+        self.canvas.delete(self.snake[-1])
+        self.snake.pop()
 
     def change_direction(self, direction):
-        pass
+        if direction == 'Up' and self.direction != 'Down':
+            self.direction = 'Up'
+        elif direction == 'Right' and self.direction != 'Left':
+            self.direction = 'Right'
+        elif direction == 'Down' and self.direction != 'Up':
+            self.direction = 'Down'
+        elif direction == 'Left' and self.direction != 'Right':
+            self.direction = 'Left'
+
+    def game_loop(self):
+        if not self.game_over:
+            self.check_food()
+            self.check_collision()
+            self.draw_snake()
+            self.move_snake()
+            if not self.game_over:
+                self.master.after(380, self.game_loop)
+            else:
+                self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
 
 def main():
