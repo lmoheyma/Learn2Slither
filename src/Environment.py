@@ -3,14 +3,14 @@ import random
 import copy
 from Food import Food
 from tools import print_map
-from QLearning import get_state
+from Interpreter import get_state
 
 behavior_colors = {
     'good': 'green',
     'bad': 'red'
 }
 
-class Snake:
+class Environment:
     def __init__(self, master, width=400, height=400,
                  nb_good_food=2, nb_bad_food=1):
         self.master = master
@@ -168,7 +168,7 @@ class Snake:
 def main():
     root = tk.Tk()
 
-    snake = Snake(root)
+    snake = Environment(root)
     root.mainloop()
 
 if __name__ == '__main__':
