@@ -1,6 +1,7 @@
 import tkinter as tk
 import random
 from Food import Food
+from tools import print_map
 
 behavior_colors = {
     'good': 'green',
@@ -26,7 +27,23 @@ class Snake:
         master.bind('<Left>', lambda event: self.change_direction('Left'))
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
+        self.update_map()
         self.game_loop()
+
+    def update_map(self):
+        self.map = [[0] * 12 for _ in range(12)]
+        for i in range(len(self.map)):
+            for j in range(len(self.map[i])):
+                if i == 0 or i == len(self.map)-1 or\
+                j == 0 or j == len(self.map[i])-1:
+                    self.map[i][j] = 'W'
+                for food in self.foods:
+                    if food == [(j-1)*self.node_size, (i-1)*self.node_size]:
+                        self.map[i][j] = food.tag
+                for node in self.snake:
+                    if node == [(j-1)*self.node_size, (i-1)*self.node_size]:
+                        self.map[i][j] = 'H' if node == self.snake[0] else 'S'
+        print_map(self.map)
 
     def init_snake(self):
         snake_head_x = random.randint(0, (self.width//self.node_size)-1) * self.node_size
@@ -38,6 +55,7 @@ class Snake:
         return snake
 
     def check_collision(self):
+        if self.game_over: return
         if self.snake[0][0] > self.width or self.snake[0][0] < 0:
             self.game_over = True
         if self.snake[0][1] > self.height or self.snake[0][1] < 0:
@@ -56,6 +74,9 @@ class Snake:
                 else:
                     self.canvas.delete(self.snake[-1])
                     self.snake.pop()
+                    if len(self.snake) < 1:
+                        self.game_over= True
+                        return
                 self.foods.append(self.create_one_food(self.foods[-1].index+1, food.behavior))
 
     def create_one_food(self, index, behavior='good'):
@@ -77,6 +98,7 @@ class Snake:
         return foods
 
     def draw_snake(self):
+        if self.game_over: return
         self.canvas.delete('snake')
         for node in self.snake:
             self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='white', tags='snake')
@@ -90,9 +112,9 @@ class Snake:
             self.snake.append([self.snake[-1][0], self.snake[-1][1]-self.node_size])
         elif self.direction == 'Left':
             self.snake.append([self.snake[-1][0]+self.node_size, self.snake[-1][1]])
-    
-    
+
     def move_snake(self):
+        if self.game_over: return
         if self.direction == 'Up':
             self.snake.insert(0, [self.snake[0][0], self.snake[0][1]-self.node_size])
         elif self.direction == 'Right':
@@ -113,6 +135,7 @@ class Snake:
             self.direction = 'Down'
         elif direction == 'Left' and self.direction != 'Right':
             self.direction = 'Left'
+        print(direction.upper())
 
     def game_loop(self):
         if not self.game_over:
@@ -120,6 +143,7 @@ class Snake:
             self.check_collision()
             self.draw_snake()
             self.move_snake()
+            self.update_map()
             if not self.game_over:
                 self.master.after(380, self.game_loop)
             else:
