@@ -4,3 +4,6 @@ def print_map(map):
             print(e, end=' ')
         print()
     print()
+
+def column(environent, index):
+    return [row[index] for row in environent]

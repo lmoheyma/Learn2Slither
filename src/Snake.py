@@ -1,7 +1,9 @@
 import tkinter as tk
 import random
+import copy
 from Food import Food
 from tools import print_map
+from QLearning import get_state
 
 behavior_colors = {
     'good': 'green',
@@ -43,7 +45,17 @@ class Snake:
                 for node in self.snake:
                     if node == [(j-1)*self.node_size, (i-1)*self.node_size]:
                         self.map[i][j] = 'H' if node == self.snake[0] else 'S'
-        print_map(self.map)
+
+    def display_vision(self):
+        head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
+        self.vision_map = copy.deepcopy(self.map)
+        for i in range(len(self.map)):
+            for j in range(len(self.map[i])):
+                if j != head_x and i != head_y:
+                    self.vision_map[i][j] = ' '
+                print(self.vision_map[i][j], end=' ')
+            print()
+        print()
 
     def init_snake(self):
         snake_head_x = random.randint(0, (self.width//self.node_size)-1) * self.node_size
@@ -140,11 +152,14 @@ class Snake:
     def game_loop(self):
         if not self.game_over:
             self.check_food()
-            self.check_collision()
             self.draw_snake()
             self.move_snake()
+            self.check_collision()
             self.update_map()
+            # print_map(self.map)
             if not self.game_over:
+                self.display_vision()
+                get_state(self.map, self.snake[0])
                 self.master.after(380, self.game_loop)
             else:
                 self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
