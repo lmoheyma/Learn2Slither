@@ -10,6 +10,13 @@ behavior_colors = {
     'bad': 'red'
 }
 
+direction = {
+    'Up': 0,
+    'Down': 1,
+    'Left': 2,
+    'Right': 3
+}
+
 class Environment:
     def __init__(self, master, width=400, height=400,
                  nb_good_food=2, nb_bad_food=1):
@@ -46,25 +53,37 @@ class Environment:
                     if node == [(j-1)*self.node_size, (i-1)*self.node_size]:
                         self.map[i][j] = 'H' if node == self.snake[0] else 'S'
 
-    def get_reward(self, state, action, next_state):
-        for food in self.foods:
-            if food == self.snake[0]:
-                if food.behavior == 'good':
-                    return 10
-                return -10
-        if self.check_collision():
-            return -100
-        return 0
+    def get_reward(self, old_head, new_head, apple, is_dead):
+        pass
+        # for food in self.foods:
+        #     if food == self.snake[0]:
+        #         if food.behavior == 'good':
+        #             return 10
+        #         return -10
+        # if self.check_collision():
+        #     return -100
+        # return 0
 
 
     def reset(self):
         pass
 
     def step(self, action):
-        next_state = self.get_next_state()
-        # reward
-        self.state = next_state
-        
+        head_x, head_y = self.snake[0]
+        move = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction[action]]
+        new_head = (head_x + move[0], head_y + move[1])
+
+        if (self.check_collision()):
+            return self.snake, new_head, True, False
+        new_snake = [new_head] + self.snake
+        got_apple = False
+        for food in self.foods:
+            if food == new_head and food.behavior == 'good':
+                got_apple = True
+        if not got_apple:
+            new_snake.pop()
+        return new_snake, new_head, False, got_apple
+
 
     def get_next_state(self, action):
         self.change_direction(action)
