@@ -2,7 +2,7 @@ import tkinter as tk
 import random
 import copy
 from Food import Food
-from tools import print_map
+from tools import column
 from Interpreter import get_state
 
 behavior_colors = {
@@ -46,6 +46,39 @@ class Environment:
                     if node == [(j-1)*self.node_size, (i-1)*self.node_size]:
                         self.map[i][j] = 'H' if node == self.snake[0] else 'S'
 
+    def get_reward(self, state, action, next_state):
+        for food in self.foods:
+            if food == self.snake[0]:
+                if food.behavior == 'good':
+                    return 10
+                return -10
+        if self.check_collision():
+            return -100
+        return 0
+
+
+    def reset(self):
+        pass
+
+    def step(self, action):
+        next_state = self.get_next_state()
+        # reward
+        self.state = next_state
+        
+
+    def get_next_state(self, action):
+        self.change_direction(action)
+        self.move_snake()
+        return self.get_state()
+
+    def get_state(self):
+        head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
+        state_vector = [column(self.map[:head_y], head_x) +
+                        self.map[head_y][head_x+1:] +
+                        column(self.map[head_y+1:], head_x) +
+                        self.map[head_y][:head_x]]
+        return state_vector
+
     def display_vision(self):
         head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
         self.vision_map = copy.deepcopy(self.map)
@@ -75,6 +108,7 @@ class Environment:
         for node in self.snake[1:]:
             if node == self.snake[0]:
                 self.game_over = True
+        return self.game_over
 
     def check_food(self):
         for food in self.foods:

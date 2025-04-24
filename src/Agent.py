@@ -19,4 +19,3 @@ class Agent:
         current_q = self.q_table[state][action]
         self.q_table[state][action] = current_q + self.learning_rate * \
             (reward + self.discount_factor * max_future_q - current_q)
-        
