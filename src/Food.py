@@ -14,8 +14,12 @@ class Food:
         self.y = random.randint(0, (height//node_size)-1) * node_size
         self.behavior = behavior
         self.tag = food_tags[behavior]
+        self.node_size = node_size
 
     def __eq__(self, other):
         if isinstance(other, (list, tuple)) and len(other) == 2:
-            return self.x == other[0] and self.y == other[1]
+            return self.x== other[0] and self.y == other[1]
         return False
+
+    def __repr__(self):
+        return repr(f"{[self.x, self.y]}")

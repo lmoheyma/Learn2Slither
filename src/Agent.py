@@ -17,7 +17,7 @@ class Agent:
             return random.randint(0, 3)
         else:
             return np.argmax(self.Q_table[state_str])
-        
+
     def update_q_value(self, state, action, reward, next_state):
         state_str = str(state)
         next_state_str = str(next_state)

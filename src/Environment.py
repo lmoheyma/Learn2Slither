@@ -2,8 +2,8 @@ import tkinter as tk
 import random
 import copy
 from Food import Food
+from Agent import Agent
 from tools import column
-from Interpreter import get_state
 
 behavior_colors = {
     'good': 'green',
@@ -19,7 +19,7 @@ direction = {
 
 class Environment:
     def __init__(self, master, width=400, height=400,
-                 nb_good_food=2, nb_bad_food=1):
+                 nb_good_food=2, nb_bad_food=1, train=False):
         self.master = master
         self.width = width
         self.height = height
@@ -37,7 +37,8 @@ class Environment:
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
         self.update_map()
-        self.game_loop()
+        if train: self.game_loop()
+        else: self.train_loop()
 
     def update_map(self):
         self.map = [[0] * 12 for _ in range(12)]
@@ -53,49 +54,58 @@ class Environment:
                     if node == [(j-1)*self.node_size, (i-1)*self.node_size]:
                         self.map[i][j] = 'H' if node == self.snake[0] else 'S'
 
-    def get_reward(self, old_head, new_head, apple, is_dead):
-        pass
-        # for food in self.foods:
-        #     if food == self.snake[0]:
-        #         if food.behavior == 'good':
-        #             return 10
-        #         return -10
-        # if self.check_collision():
-        #     return -100
-        # return 0
-
+    def get_reward(self, new_head, snake, apples):
+        for apple in apples:
+            if apple == new_head:
+                if apple.behavior == 'good':
+                    return 20
+                return -20
+            if (new_head in snake) or not (0 <= new_head[0] < self.width//self.node_size) or not (0 <= new_head[1] < self.height//self.node_size):
+                return -50
+        return -5
 
     def reset(self):
-        pass
+        snake = self.init_snake()
+        apples = self.create_foods(2, 1)
+        return snake, apples
 
-    def step(self, action):
-        head_x, head_y = self.snake[0]
-        move = [(0, -1), (0, 1), (-1, 0), (1, 0)][direction[action]]
-        new_head = (head_x + move[0], head_y + move[1])
+    def step(self, action, snake, apples):
+        head_x, head_y = snake[0]
+        move = [(0, -1), (0, 1), (-1, 0), (1, 0)][action]
+        new_head = [head_x + move[0], head_y + move[1]]
+        got_apple = None
 
-        if (self.check_collision()):
-            return self.snake, new_head, True, False
-        new_snake = [new_head] + self.snake
-        got_apple = False
-        for food in self.foods:
-            if food == new_head and food.behavior == 'good':
-                got_apple = True
-        if not got_apple:
+        new_snake = [new_head] + snake
+        # if (self.check_collision(new_head, new_snake[:-1])):
+        #     return new_snake, new_head, True, got_apple
+        if (new_head in snake):
+            print('EAT ITSELF')
+        if (new_head in snake) or not (0 <= new_head[0] < self.width//self.node_size) or not (0 <= new_head[1] < self.height//self.node_size):
+            print(new_head, new_snake)
+            return snake, new_head, True, None
+
+        # print(apples)
+        for apple in apples:
+            if apple == new_head:
+                print('APPLEEEE')
+                got_apple = apple
+        if got_apple == None:
+            new_snake.pop()
+        if got_apple and got_apple.behavior != 'good':
             new_snake.pop()
         return new_snake, new_head, False, got_apple
-
 
     def get_next_state(self, action):
         self.change_direction(action)
         self.move_snake()
         return self.get_state()
 
-    def get_state(self):
-        head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
-        state_vector = [column(self.map[:head_y], head_x) +
-                        self.map[head_y][head_x+1:] +
-                        column(self.map[head_y+1:], head_x) +
-                        self.map[head_y][:head_x]]
+    def get_state(self, snake, vision=3):
+        head_x, head_y = snake[0]
+        state_vector = [column(self.map[head_y-vision:head_y], head_x) +
+                        self.map[head_y][head_x+1:head_x+vision+1] +
+                        column(self.map[head_y+1:head_y+vision+1], head_x) +
+                        self.map[head_y][head_x-vision:head_x]]
         return state_vector
 
     def display_vision(self):
@@ -116,16 +126,18 @@ class Environment:
         for _ in range(2):
             new_node = [snake[-1][0]+self.node_size, snake[-1][1]]
             snake.append(new_node)
-        return snake
+        return [[(coord//self.node_size) for coord in node] for node in snake]
 
-    def check_collision(self):
-        if self.game_over: return
-        if self.snake[0][0] > self.width or self.snake[0][0] < 0:
+    def check_collision(self, snake_head, snake):
+        if snake_head[0] > self.width//self.node_size or snake_head[0] < 0:
             self.game_over = True
-        if self.snake[0][1] > self.height or self.snake[0][1] < 0:
+        if snake_head[1] > self.height//self.node_size or snake_head[1] < 0:
             self.game_over = True
-        for node in self.snake[1:]:
-            if node == self.snake[0]:
+        print(f'snake_head: {snake_head}')
+        print(snake)
+        for node in snake[1:]:
+            if node == snake_head:
+                print('EAT ITSELF')
                 self.game_over = True
         return self.game_over
 
@@ -149,6 +161,8 @@ class Environment:
         self.canvas.create_rectangle(food.x, food.y, food.x+self.node_size,
                                      food.y+self.node_size, fill=behavior_colors[behavior],
                                      tags=f'food{index}')
+        food.x //=self.node_size
+        food.y //=self.node_size
         return food
 
     def create_foods(self, nb_good_food, nb_bad_food):
@@ -212,17 +226,51 @@ class Environment:
             # print_map(self.map)
             if not self.game_over:
                 self.display_vision()
-                get_state(self.map, self.snake[0])
+                self.get_state(self.snake)
                 self.master.after(380, self.game_loop)
             else:
                 self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
+    def train_loop(self):
+        agent = Agent()
+
+        epochs = 1000
+
+        for epoch in range(epochs):
+            i = 0
+            snake, apples = self.reset()
+            state = self.get_state(snake)
+            done = False
+            score = 0
+            self.game_over = False
+
+            while not done:
+                action = agent.choose_action(state)
+                new_snake, new_head, is_dead, got_apple = self.step(action, snake, apples)
+                if got_apple != None:
+                    print('APPLE')
+                    apples.remove(got_apple)
+                    apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
+                    print(apples)
+                next_state = self.get_state(new_snake)
+                reward = self.get_reward(new_head, new_snake, apples)
+                agent.update_q_value(state, action, reward, next_state)
+
+                state = next_state
+                snake = new_snake
+                done = is_dead
+                if got_apple != None:
+                    score += 1
+                i+=1
+                print(new_head)
+            agent.epsilon = max(agent.min_epsilon, agent.epsilon * agent.epsilon_decay)
+            print(f"Epoch {epoch+1}, score : {score}, epsilon : {agent.epsilon:.3f}, nb_iter : {i}")
 
 def main():
     root = tk.Tk()
 
-    snake = Environment(root)
-    root.mainloop()
+    Environment(root)
+    # root.mainloop()
 
 if __name__ == '__main__':
     main()
