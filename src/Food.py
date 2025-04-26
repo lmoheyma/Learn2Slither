@@ -10,8 +10,8 @@ food_tags = {
 class Food:
     def __init__(self, width, height, node_size, index, behavior='good'):
         self.index = index
-        self.x = random.randint(0, (width//node_size)-1) * node_size
-        self.y = random.randint(0, (height//node_size)-1) * node_size
+        self.x = random.randint(1, (width//node_size)-1) * node_size
+        self.y = random.randint(1, (height//node_size)-1) * node_size
         self.behavior = behavior
         self.tag = food_tags[behavior]
         self.node_size = node_size

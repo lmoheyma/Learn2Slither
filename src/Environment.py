@@ -48,18 +48,18 @@ class Environment:
                 j == 0 or j == len(self.map[i])-1:
                     self.map[i][j] = 'W'
                 for food in foods:
-                    if food == [(j-1), (i-1)]:
+                    if food == [(j), (i)]:
                         self.map[i][j] = food.tag
                 for node in snake:
-                    if node == [(j-1), (i-1)]:
+                    if node == [(j), (i)]:
                         self.map[i][j] = 'H' if node == snake[0] else 'S'
 
     def get_reward(self, new_head, is_dead, apple):
         if apple:
-            return 20 if apple.behavior == 'good' else -20
+            return 30 if apple.behavior == 'good' else -20
         if is_dead:
             return -50
-        return -4
+        return -1
 
     def reset(self):
         snake = self.init_snake()
@@ -79,7 +79,8 @@ class Environment:
         #     return new_snake, new_head, True, got_apple
         # if (new_head in snake):
         #     print('EAT ITSELF')
-        if (new_head in snake) or not (0 <= new_head[0] < self.width//self.node_size) or not (0 <= new_head[1] < self.height//self.node_size):
+        if ((new_head in snake) or self.check_collision(new_head)):
+            # print(action)
             # print(new_head, new_snake)
             return snake, new_head, True, None
 
@@ -94,50 +95,52 @@ class Environment:
             new_snake.pop()
         return new_snake, new_head, False, got_apple
 
-    def get_next_state(self, action):
-        self.change_direction(action)
-        self.move_snake()
-        return self.get_state()
+    def get_state(self, snake, vision=4):
+        def check_collision(point, snake):
+            x, y = point
+            if x < 0 or x >= self.width//self.node_size or y < 0 or y >= self.height//self.node_size:
+                return True
+            if point in snake[1:]:
+                return True
+            return False
+        head = snake[0]
+        point_left = (head[0] - 1, head[1])
+        point_right = (head[0] + 1, head[1])
+        point_up = (head[0], head[1] - 1)
+        point_down = (head[0], head[1] + 1)
 
-    def get_state(self, snake, vision=2):
-        # def check_collision(point, snake):
-        #     x, y = point
-        #     if x < 0 or x >= self.width//self.node_size or y < 0 or y >= self.height//self.node_size:
-        #         return True
-        #     if point in snake[1:]:
-        #         return True
-        #     return False
-        # head = snake[0]
-        # point_left = (head[0] - 1, head[1])
-        # point_right = (head[0] + 1, head[1])
-        # point_up = (head[0], head[1] - 1)
-        # point_down = (head[0], head[1] + 1)
+        dir_left = snake[1][0] < head[0] if len(snake) > 1 else False
+        dir_right = snake[1][0] > head[0] if len(snake) > 1 else False
+        dir_up = snake[1][1] < head[1] if len(snake) > 1 else False
+        dir_down = snake[1][1] > head[1] if len(snake) > 1 else False
 
-        # dir_left = snake[1][0] < head[0] if len(snake) > 1 else False
-        # dir_right = snake[1][0] > head[0] if len(snake) > 1 else False
-        # dir_up = snake[1][1] < head[1] if len(snake) > 1 else False
-        # dir_down = snake[1][1] > head[1] if len(snake) > 1 else False
 
-        # danger_straight = False
-        # danger_right = False
-        # danger_left = False
+        danger_straight = False
+        danger_right = False
+        danger_left = False
 
-        # if dir_up:
-        #     danger_straight = check_collision(point_up, snake)
-        #     danger_right = check_collision(point_right, snake)
-        #     danger_left = check_collision(point_left, snake)
-        # elif dir_down:
-        #     danger_straight = check_collision(point_down, snake)
-        #     danger_right = check_collision(point_left, snake)
-        #     danger_left = check_collision(point_right, snake)
-        # elif dir_left:
-        #     danger_straight = check_collision(point_left, snake)
-        #     danger_right = check_collision(point_up, snake)
-        #     danger_left = check_collision(point_down, snake)
-        # elif dir_right:
-        #     danger_straight = check_collision(point_right, snake)
-        #     danger_right = check_collision(point_down, snake)
-        #     danger_left = check_collision(point_up, snake)
+        if dir_up:
+            danger_straight = check_collision(point_up, snake)
+            danger_right = check_collision(point_right, snake)
+            danger_left = check_collision(point_left, snake)
+        elif dir_down:
+            danger_straight = check_collision(point_down, snake)
+            danger_right = check_collision(point_left, snake)
+            danger_left = check_collision(point_right, snake)
+        elif dir_left:
+            danger_straight = check_collision(point_left, snake)
+            danger_right = check_collision(point_up, snake)
+            danger_left = check_collision(point_down, snake)
+        elif dir_right:
+            danger_straight = check_collision(point_right, snake)
+            danger_right = check_collision(point_down, snake)
+            danger_left = check_collision(point_up, snake)
+
+        head_x, head_y = snake[0]
+        apple_up = ['G', 'R'] in column(self.map[:head_y], head_x)
+        apple_right = ['G', 'R'] in self.map[head_y][head_x+1:]
+        apple_down = ['G', 'R'] in column(self.map[head_y+1:], head_x)
+        apple_left = ['G', 'R'] in self.map[head_y][:head_x]
 
         # apple_left = self.map[head[1]][head[0]-1] in ['G', 'R']
         # apple_right = self.map[head[1]][head[0]+1] in ['G', 'R']
@@ -147,20 +150,20 @@ class Environment:
         # print_map(self.map)
         # print(apple_left, apple_right, apple_up, apple_down)
 
-        # state = [
-        #     danger_straight,
-        #     danger_right,
-        #     danger_left,
-        #     dir_up,
-        #     dir_down,
-        #     dir_left,
-        #     dir_right,
-        #     apple_up,
-        #     apple_down,
-        #     apple_left,
-        #     apple_right
-        # ]
-        # return state
+        state = [
+            danger_straight,
+            danger_right,
+            danger_left,
+            # dir_up,
+            # dir_down,
+            # dir_left,
+            # dir_right,
+            apple_up,
+            apple_down,
+            apple_left,
+            apple_right
+        ]
+        return [1 if s else 0 for s in state]
         head_x, head_y = snake[0]
         state_vector = [column(self.map[head_y-vision:head_y], head_x) +
                         self.map[head_y][head_x+1:head_x+vision+1] +
@@ -188,15 +191,11 @@ class Environment:
             snake.append(new_node)
         return [[(coord//self.node_size) for coord in node] for node in snake]
 
-    def check_collision(self, snake_head, snake):
-        if snake_head[0] > self.width//self.node_size or snake_head[0] < 0:
+    def check_collision(self, snake_head):
+        if snake_head[0] > self.width//self.node_size or snake_head[0] < 1:
             self.game_over = True
-        if snake_head[1] > self.height//self.node_size or snake_head[1] < 0:
+        if snake_head[1] > self.height//self.node_size or snake_head[1] < 1:
             self.game_over = True
-        for node in snake[1:]:
-            if node == snake_head:
-                print('EAT ITSELF IN CHECK')
-                self.game_over = True
         return self.game_over
 
     def check_food(self):
@@ -306,8 +305,10 @@ class Environment:
             while not done:
                 action = agent.choose_action(state)
                 new_snake, new_head, is_dead, got_apple = self.step(action, snake, apples)
+                # print_map(self.map)
+                self.update_map(new_snake, apples)
                 if got_apple != None:
-                    print('APPLE')
+                    print('APPLE', got_apple)
                     apples.remove(got_apple)
                     apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
                     # print(apples)
@@ -318,11 +319,10 @@ class Environment:
                 state = next_state
                 snake = new_snake
                 done = is_dead
-                if got_apple != None:   
+                if got_apple != None:
                     score += 1
                 i+=1
-                self.update_map(snake, apples)
-                # print(new_head)
+                # print_map(self.map)
             agent.epsilon = max(agent.min_epsilon, agent.epsilon * agent.epsilon_decay)
             print(f"Epoch {epoch+1}, score : {score}, epsilon : {agent.epsilon:.3f}, nb_iter : {i}")
 
