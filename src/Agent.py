@@ -8,7 +8,7 @@ class Agent:
         self.gamma = 0.99
         self.epsilon = 1
         self.min_epsilon = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.999
         self.actions = [0, 1, 2, 3]
 
     def choose_action(self, state):
