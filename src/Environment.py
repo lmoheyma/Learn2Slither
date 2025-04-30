@@ -137,10 +137,10 @@ class Environment:
             danger_left = check_collision(point_up, snake)
 
         head_x, head_y = snake[0]
-        apple_up = ['G', 'R'] in column(self.map[:head_y], head_x)
-        apple_right = ['G', 'R'] in self.map[head_y][head_x+1:]
-        apple_down = ['G', 'R'] in column(self.map[head_y+1:], head_x)
-        apple_left = ['G', 'R'] in self.map[head_y][:head_x]
+        apple_up = ('G' or 'R') in column(self.map[:head_y], head_x)
+        apple_right = ('G' or 'R') in self.map[head_y][head_x+1:]
+        apple_down = ('G' or 'R') in column(self.map[head_y+1:], head_x)
+        apple_left = ('G' or 'R') in self.map[head_y][:head_x]
 
         # apple_left = self.map[head[1]][head[0]-1] in ['G', 'R']
         # apple_right = self.map[head[1]][head[0]+1] in ['G', 'R']
@@ -163,6 +163,8 @@ class Environment:
             apple_left,
             apple_right
         ]
+        # print([1 if s else 0 for s in state])
+        # print_map(self.map)
         return [1 if s else 0 for s in state]
         head_x, head_y = snake[0]
         state_vector = [column(self.map[head_y-vision:head_y], head_x) +
