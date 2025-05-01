@@ -10,6 +10,8 @@ class Agent:
         self.min_epsilon = 0.01
         self.epsilon_decay = 0.999
         self.actions = [0, 1, 2, 3]
+        self.scores_history = []
+        self.movements = []
 
     def choose_action(self, state):
         state_str = str(state)

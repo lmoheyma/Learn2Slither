@@ -7,3 +7,8 @@ def print_map(map):
 
 def column(environent, index):
     return [row[index] for row in environent]
+
+def get_key(dict, value):
+    for key, val in dict.items():
+        if val == value:
+            return key
