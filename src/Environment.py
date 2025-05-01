@@ -1,6 +1,7 @@
 import tkinter as tk
 import random
 import copy
+import time
 from Food import Food
 from Agent import Agent
 from tools import column, print_map, get_key
@@ -208,7 +209,10 @@ class Environment:
         if self.game_over: return
         self.canvas.delete('snake')
         for node in snake:
-            self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='white', tags='snake')
+            if node == snake[0]: 
+                self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='purple2', tags='snake')
+            else:
+                self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='MediumPurple2', tags='snake')
 
     def append_node(self):
         if self.direction == 'Up':
@@ -251,7 +255,6 @@ class Environment:
             self.move_snake()
             self.check_collision()
             self.update_map()
-            # print_map(self.map)
             if not self.game_over:
                 self.display_vision()
                 self.get_state(self.snake)
@@ -259,15 +262,22 @@ class Environment:
             else:
                 self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
-    def replay_loop(self, game):
-        for action in game:
-            self.draw_snake(action['snake'])
-            pass
+    def replay_loop(self, action, index):
+        action[index]['snake'] = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
+        self.canvas.delete('food')
+        for food in action[index]['apples']:
+            x = (food.x-1) * self.node_size
+            y = (food.y-1) * self.node_size
+            self.canvas.create_rectangle(x, y, x+self.node_size,
+                                    y+self.node_size, fill=behavior_colors[food.behavior],
+                                    tags='food')
+        self.draw_snake(action[index]['snake'])
+        if index < len(action)-1: self.master.after(280, lambda: self.replay_loop(action, index+1))
+        else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
         agent = Agent()
-
-        epochs = 10000
+        epochs = 5000
 
         for epoch in range(epochs):
             i = 0
@@ -277,10 +287,7 @@ class Environment:
             done = False
             score = 0
             self.game_over = False
-            game_states = [{
-                'snake': snake,
-                'apples': apples
-            }]
+            game_states = []
 
             while not done:
                 action = agent.choose_action(state)
@@ -297,7 +304,7 @@ class Environment:
                 snake = new_snake
                 game_states.append({
                     'snake': new_snake,
-                    'apples': apples
+                    'apples': copy.deepcopy(apples)
                 })
                 done = is_dead
                 if got_apple != None:
@@ -312,13 +319,14 @@ class Environment:
             print(f"Epoch {epoch+1}, score : {score}, epsilon : {agent.epsilon:.3f}, nb_iter : {i}")
         agent.scores_history = sorted(agent.scores_history, key=lambda x: x['score'])
         print(f'Best score : {agent.scores_history[-1]["score"]}')
-        self.master.mainloop()
-        self.replay_loop(agent.scores_history[-1]["game_states"])
+        self.master.after(380, lambda: self.replay_loop(agent.scores_history[-1]["game_states"], 0))
 
 def main():
     root = tk.Tk()
+    root.title("Snake AI")
 
     Environment(root)
+    root.mainloop()
 
 if __name__ == '__main__':
     main()
