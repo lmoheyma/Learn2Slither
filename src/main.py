@@ -30,7 +30,7 @@ def main():
         save_file = f'{args.sessions}sess.json'
     agent = Agent(args.sessions, save_file)
     if args.load is not None: agent.load_q_table(args.load)
-    Environment(root, agent=agent)
+    Environment(root, agent=agent, dont_train=args.dont_learn)
     root.mainloop()
 
 if __name__ == '__main__':

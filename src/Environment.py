@@ -20,7 +20,7 @@ direction = {
 
 class Environment:
     def __init__(self, master, width=400, height=400,
-                 nb_good_food=2, nb_bad_food=1, train=True,
+                 nb_good_food=2, nb_bad_food=1, dont_train=False,
                  agent=Agent):
         self.master = master
         self.width = width
@@ -39,9 +39,11 @@ class Environment:
         master.bind('<Left>', lambda event: self.change_direction('Left'))
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
-        self.update_map(self.snake, self.foods)
-        if train: self.train_loop()
-        else: self.game_loop()
+        if not dont_train: self.train_loop()
+        else:
+            snake, apples = self.reset()
+            self.update_map(snake, apples)
+            self.agent_loop(snake, apples)
 
     def update_map(self, snake, foods):
         self.map = [[0] * 12 for _ in range(12)]
@@ -135,6 +137,10 @@ class Environment:
         apple_left = ('G' or 'R') in self.map[head_y][:head_x]
 
         state = [
+            dir_left,
+            dir_right,
+            dir_up,
+            dir_down,
             danger_straight,
             danger_right,
             danger_left,
@@ -250,6 +256,26 @@ class Environment:
             self.direction = 'Left'
         print(direction.upper())
 
+    def agent_loop(self, snake, apples):
+        # snake = [[((coord-1)*self.node_size) for coord in node] for node in snake]
+        self.canvas.delete('food')
+        for food in apples:
+            x = (food.x-1) * self.node_size
+            y = (food.y-1) * self.node_size
+            self.canvas.create_rectangle(x, y, x+self.node_size,
+                                    y+self.node_size, fill=behavior_colors[food.behavior],
+                                    tags='food')
+        self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in snake])
+        state = self.get_state(snake)
+        action = self.agent.choose_action(state)
+        new_snake, _, is_dead, got_apple = self.step(action, snake, apples)
+        self.update_map(new_snake, apples)
+        if got_apple != None:
+            apples.remove(got_apple)
+            apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
+        if not is_dead: self.master.after(280, lambda: self.agent_loop(new_snake, apples))
+        else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
+
     def game_loop(self):
         if not self.game_over:
             self.check_food()
@@ -278,6 +304,7 @@ class Environment:
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
+        best_score = 0
         for epoch in range(self.agent.epochs):
             i = 0
             snake, apples = self.reset()
@@ -313,8 +340,10 @@ class Environment:
             self.agent.scores_history.append({
                 'score': score,
                 'game_states': game_states,
-                
             })
+            if score > best_score:
+                best_score = score
+                self.agent.saved_table = self.agent.Q_table
             print(f"Epoch {epoch+1}, score : {score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {i}")
         self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
         print(f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')

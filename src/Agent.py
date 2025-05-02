@@ -8,6 +8,7 @@ import os
 class Agent:
     def __init__(self, epochs, save_file):
         self.Q_table = {}
+        self.saved_table = {}
         self.learning_rate = 0.1
         self.epochs = epochs
         self.gamma = 0.99
@@ -44,7 +45,7 @@ class Agent:
             if not os.path.isdir(folder):
                     os.mkdir(folder)
             with open(f'{folder}/{filename}', "w") as f:
-                json.dump(self.Q_table, f, indent=4)
+                json.dump(self.saved_table, f, indent=4)
             print_info(f'Model saved in {UGREEN}{filename}')
         except Exception:
             print(f"{BHRED}Fail to save file '{RED}{filename}{BHRED}'.{RESET}")
@@ -52,6 +53,7 @@ class Agent:
 
     def load_q_table(self, filename):
         try:
+            print_info(f'Load trained model from {UGREEN}{filename}')
             with open(filename, 'r') as file:
                 self.Q_table = json.load(file)
         except Exception:
