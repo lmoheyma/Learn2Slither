@@ -14,7 +14,7 @@ def main():
                         choices=['on', 'off'],
                         default='on',
                         help="Visual mode: 'on' or 'off'")
-    parser.add_argument('-load', type=str, default='../models/sess.json',
+    parser.add_argument('-load', type=str,
                         help='Path of the model to load')
     parser.add_argument('-dont-learn', action='store_true',
                         help='Agent will not learn')
@@ -29,6 +29,7 @@ def main():
     if save_file is None:
         save_file = f'{args.sessions}sess.json'
     agent = Agent(args.sessions, save_file)
+    if args.load is not None: agent.load_q_table(args.load)
     Environment(root, agent=agent)
     root.mainloop()
 

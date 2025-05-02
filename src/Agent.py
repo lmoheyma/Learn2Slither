@@ -50,5 +50,10 @@ class Agent:
             print(f"{BHRED}Fail to save file '{RED}{filename}{BHRED}'.{RESET}")
             exit(1)
 
-    def load_q_table(self):
-        pass
+    def load_q_table(self, filename):
+        try:
+            with open(filename, 'r') as file:
+                self.Q_table = json.load(file)
+        except Exception:
+            print(f"{BHRED}Fail to load file '{RED}{filename}{BHRED}'.{RESET}")
+            exit(1)
