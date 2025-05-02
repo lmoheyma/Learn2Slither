@@ -1,17 +1,23 @@
 import random
 import numpy as np
+import json
+from tools import print_info
+from colors import UGREEN, BHRED, RED, RESET
+import os
 
 class Agent:
-    def __init__(self):
+    def __init__(self, epochs, save_file):
         self.Q_table = {}
         self.learning_rate = 0.1
+        self.epochs = epochs
         self.gamma = 0.99
         self.epsilon = 1
         self.min_epsilon = 0.01
-        self.epsilon_decay = 0.999
+        self.epsilon_decay = 0.95
         self.actions = [0, 1, 2, 3]
         self.scores_history = []
         self.movements = []
+        self.save_file = save_file
 
     def choose_action(self, state):
         state_str = str(state)
@@ -31,3 +37,18 @@ class Agent:
 
         best_next = max(self.Q_table[next_state_str])
         self.Q_table[state_str][action] += self.learning_rate * (reward + self.gamma * best_next - self.Q_table[state_str][action])
+
+    def save_q_table(self, filename='sess.json'):
+        folder = '../models'
+        try:
+            if not os.path.isdir(folder):
+                    os.mkdir(folder)
+            with open(f'{folder}/{filename}', "w") as f:
+                json.dump(self.Q_table, f, indent=4)
+            print_info(f'Model saved in {UGREEN}{filename}')
+        except Exception:
+            print(f"{BHRED}Fail to save file '{RED}{filename}{BHRED}'.{RESET}")
+            exit(1)
+
+    def load_q_table(self):
+        pass

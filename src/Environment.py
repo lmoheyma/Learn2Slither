@@ -1,10 +1,10 @@
 import tkinter as tk
 import random
 import copy
-import time
 from Food import Food
 from Agent import Agent
 from tools import column, print_map, get_key
+from colors import BCYAN, RESET, BWHITE
 
 behavior_colors = {
     'good': 'green',
@@ -20,7 +20,8 @@ direction = {
 
 class Environment:
     def __init__(self, master, width=400, height=400,
-                 nb_good_food=2, nb_bad_food=1, train=False):
+                 nb_good_food=2, nb_bad_food=1, train=True,
+                 agent=Agent):
         self.master = master
         self.width = width
         self.height = height
@@ -31,6 +32,7 @@ class Environment:
         self.foods = self.create_foods(nb_good_food, nb_bad_food)
         self.direction = 'Left'
         self.game_over = False
+        self.agent = agent
 
         master.bind('<Up>', lambda event: self.change_direction('Up'))
         master.bind('<Down>', lambda event: self.change_direction('Down'))
@@ -38,8 +40,8 @@ class Environment:
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
         self.update_map(self.snake, self.foods)
-        if train: self.game_loop()
-        else: self.train_loop()
+        if train: self.train_loop()
+        else: self.game_loop()
 
     def update_map(self, snake, foods):
         self.map = [[0] * 12 for _ in range(12)]
@@ -57,10 +59,10 @@ class Environment:
 
     def get_reward(self, new_head, is_dead, apple):
         if apple:
-            return 30 if apple.behavior == 'good' else -20
+            return 50 if apple.behavior == 'good' else -50
         if is_dead:
-            return -50
-        return -1
+            return -60
+        return -2
 
     def reset(self):
         snake = self.init_snake()
@@ -276,10 +278,7 @@ class Environment:
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
-        agent = Agent()
-        epochs = 5000
-
-        for epoch in range(epochs):
+        for epoch in range(self.agent.epochs):
             i = 0
             snake, apples = self.reset()
             self.update_map(snake, apples)
@@ -290,7 +289,7 @@ class Environment:
             game_states = []
 
             while not done:
-                action = agent.choose_action(state)
+                action = self.agent.choose_action(state)
                 new_snake, new_head, is_dead, got_apple = self.step(action, snake, apples)
                 self.update_map(new_snake, apples)
                 if got_apple != None:
@@ -298,7 +297,7 @@ class Environment:
                     apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
                 next_state = self.get_state(new_snake)
                 reward = self.get_reward(new_head, is_dead, got_apple)
-                agent.update_q_value(state, action, reward, next_state)
+                self.agent.update_q_value(state, action, reward, next_state)
 
                 state = next_state
                 snake = new_snake
@@ -310,23 +309,14 @@ class Environment:
                 if got_apple != None:
                     score += 1
                 i+=1
-            agent.epsilon = max(agent.min_epsilon, agent.epsilon * agent.epsilon_decay)
-            agent.scores_history.append({
+            self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
+            self.agent.scores_history.append({
                 'score': score,
                 'game_states': game_states,
                 
             })
-            print(f"Epoch {epoch+1}, score : {score}, epsilon : {agent.epsilon:.3f}, nb_iter : {i}")
-        agent.scores_history = sorted(agent.scores_history, key=lambda x: x['score'])
-        print(f'Best score : {agent.scores_history[-1]["score"]}')
-        self.master.after(380, lambda: self.replay_loop(agent.scores_history[-1]["game_states"], 0))
-
-def main():
-    root = tk.Tk()
-    root.title("Snake AI")
-
-    Environment(root)
-    root.mainloop()
-
-if __name__ == '__main__':
-    main()
+            print(f"Epoch {epoch+1}, score : {score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {i}")
+        self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
+        print(f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+        self.agent.save_q_table(f'{self.agent.save_file}')
+        self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))

@@ -1,39 +1,36 @@
 from Environment import Environment
 from Agent import Agent
 import tkinter as tk
+from argparse import ArgumentParser
 
 def main():
-    # Train model
+    parser = ArgumentParser(
+        description='Learn2Slither')
+    parser.add_argument('-sessions', type=int, default=1000,
+                        help='Number of training sessions for the agent')
+    parser.add_argument('-save', type=str,
+                        help='Name of the model file to save')
+    parser.add_argument('-visual', type=str,
+                        choices=['on', 'off'],
+                        default='on',
+                        help="Visual mode: 'on' or 'off'")
+    parser.add_argument('-load', type=str, default='../models/sess.json',
+                        help='Path of the model to load')
+    parser.add_argument('-dont-learn', action='store_true',
+                        help='Agent will not learn')
+    parser.add_argument('-step-by-step', type=str, default='../models/sess.json',
+                        help='Path where the model will be save')
+
+    args = parser.parse_args()
+    
     root = tk.Tk()
-    env = Environment(root)
-    agent = Agent()
-
-    epochs = 1000
-
-    for epoch in range(epochs):
-        snake, apple = env.reset()
-        state = env.get_state(snake)
-        done = False
-        score = 0
-
-        while not done:
-            action = agent.choose_action(state)
-            new_snake, new_head, is_dead, got_apple = env.step(action)
-            if got_apple:
-                print(apple)
-                # generate new apple (new_snake)
-                pass
-            next_state = env.get_state(new_snake)
-            reward = env.get_reward(snake[0], new_head, apple, is_dead)
-            agent.update_q_value(state, action, reward, next_state)
-
-            state = next_state
-            snake = new_snake
-            done = is_dead
-            if got_apple:
-                score += 1
-        epsilon = max(agent.min_epsilon, epsilon * agent.epsilon_decay)
-        print(f"Épisode {epoch+1}, score : {score}, epsilon : {epsilon:.3f}")
+    root.title("Snake AI")
+    save_file = args.save
+    if save_file is None:
+        save_file = f'{args.sessions}sess.json'
+    agent = Agent(args.sessions, save_file)
+    Environment(root, agent=agent)
+    root.mainloop()
 
 if __name__ == '__main__':
     main()
