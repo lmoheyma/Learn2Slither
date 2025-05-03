@@ -7,8 +7,8 @@ def print_map(map):
         print()
     print()
 
-def column(environent, index):
-    return [row[index] for row in environent]
+def column(environment, index):
+    return [row[index] for row in environment]
 
 def get_key(dict, value):
     for key, val in dict.items():

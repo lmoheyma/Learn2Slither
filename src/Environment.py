@@ -61,10 +61,10 @@ class Environment:
 
     def get_reward(self, new_head, is_dead, apple):
         if apple:
-            return 50 if apple.behavior == 'good' else -50
+            return 20 if apple.behavior == 'good' else -20
         if is_dead:
-            return -60
-        return -2
+            return -40
+        return -1
 
     def reset(self):
         snake = self.init_snake()
@@ -80,7 +80,6 @@ class Environment:
         if ((new_head in snake) or self.check_collision(new_head)):
             return snake, new_head, True, None
 
-        # print(apples)
         for apple in apples:
             if apple == new_head:
                 got_apple = apple
@@ -104,14 +103,10 @@ class Environment:
         point_up = (head[0], head[1] - 1)
         point_down = (head[0], head[1] + 1)
 
-        dir_left = snake[1][0] < head[0] if len(snake) > 1 else False
-        dir_right = snake[1][0] > head[0] if len(snake) > 1 else False
-        dir_up = snake[1][1] < head[1] if len(snake) > 1 else False
-        dir_down = snake[1][1] > head[1] if len(snake) > 1 else False
-
-        danger_straight = False
-        danger_right = False
-        danger_left = False
+        dir_left = snake[1][0] > head[0]
+        dir_right = snake[1][0] < head[0]
+        dir_up = snake[1][1] > head[1]
+        dir_down = snake[1][1] < head[1]
 
         if dir_up:
             danger_straight = check_collision(point_up, snake)
@@ -214,7 +209,6 @@ class Environment:
         return foods
 
     def draw_snake(self, snake):
-        if self.game_over: return
         self.canvas.delete('snake')
         for node in snake:
             if node == snake[0]: 
@@ -292,6 +286,7 @@ class Environment:
 
     def replay_loop(self, action, index):
         action[index]['snake'] = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
+        print(action[index]['snake'])
         self.canvas.delete('food')
         for food in action[index]['apples']:
             x = (food.x-1) * self.node_size
