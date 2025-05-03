@@ -62,10 +62,10 @@ class Environment:
 
     def get_reward(self, is_dead, apple):
         if apple:
-            return 20 if apple.behavior == 'good' else -20
+            return 20 if apple.behavior == 'good' else -40
         if is_dead:
             return -50
-        return -0.2
+        return -1
 
     def reset(self):
         snake = self.init_snake()
@@ -79,7 +79,7 @@ class Environment:
         got_apple = None
         new_snake = [new_head] + snake
         if ((new_head in snake) or self.check_collision(new_head)):
-            return snake, new_head, True, None
+            return snake, True, None
 
         for apple in apples:
             if apple == new_head:
@@ -88,7 +88,7 @@ class Environment:
             new_snake.pop()
         if got_apple and got_apple.behavior != 'good':
             new_snake.pop()
-        return new_snake, new_head, False, got_apple
+        return new_snake, False, got_apple
 
     def get_state(self, snake):
         def check_collision(point, snake):
@@ -99,10 +99,10 @@ class Environment:
                 return True
             return False
         head = snake[0]
-        point_left = (head[0]-1, head[1])
-        point_right = (head[0]+1, head[1])
-        point_up = (head[0], head[1]-1)
-        point_down = (head[0], head[1]+1)
+        point_left = [head[0]-1, head[1]]
+        point_right = [head[0]+1, head[1]]
+        point_up = [head[0], head[1]-1]
+        point_down = [head[0], head[1]+1]
 
         dir_left = snake[1][0] > head[0]
         dir_right = snake[1][0] < head[0]
@@ -110,21 +110,25 @@ class Environment:
         dir_down = snake[1][1] < head[1]
 
         if dir_up:
-            danger_straight = check_collision(point_up, snake)
+            danger_up = check_collision(point_up, snake)
             danger_right = check_collision(point_right, snake)
             danger_left = check_collision(point_left, snake)
+            danger_down = True
         elif dir_down:
-            danger_straight = check_collision(point_down, snake)
+            danger_down = check_collision(point_down, snake)
             danger_right = check_collision(point_left, snake)
             danger_left = check_collision(point_right, snake)
+            danger_up = True
         elif dir_left:
-            danger_straight = check_collision(point_left, snake)
-            danger_right = check_collision(point_up, snake)
-            danger_left = check_collision(point_down, snake)
+            danger_left = check_collision(point_left, snake)
+            danger_up = check_collision(point_up, snake)
+            danger_down = check_collision(point_down, snake)
+            danger_right = True
         elif dir_right:
-            danger_straight = check_collision(point_right, snake)
-            danger_right = check_collision(point_down, snake)
-            danger_left = check_collision(point_up, snake)
+            danger_right = check_collision(point_right, snake)
+            danger_down = check_collision(point_down, snake)
+            danger_up = check_collision(point_up, snake)
+            danger_left = True
 
         head_x, head_y = snake[0]
         collision_before_apple = False
@@ -132,41 +136,43 @@ class Environment:
         try:
             apple_up = head_y - column(self.map[:head_y], head_x).index('G')
             collision_before_apple = 'S' in column(self.map[abs(apple_up-head_y):head_y], head_x) and dir_up
+            apple_up = 1
         except ValueError:
             apple_up = 0
         try:
             apple_right = self.map[head_y][head_x+1:].index('G')+1
             collision_before_apple = 'S' in self.map[head_y][head_x+1:head_x+apple_right+1] and dir_right
+            apple_right = 1
         except ValueError:
             apple_right = 0
         try:
             apple_down = column(self.map[head_y+1:], head_x).index('G')+1
             collision_before_apple = 'S' in column(self.map[head_y+1:head_y+apple_down+1], head_x) and dir_down
+            apple_down = 1
         except ValueError:
             apple_down = 0
         try:
             apple_left = head_x - self.map[head_y][:head_x].index('G')
             collision_before_apple = 'S' in self.map[head_y][abs(apple_left-head_x):head_x] and dir_left
+            apple_left = 1
         except ValueError:
             apple_left = 0
 
-        state = [
+        return [
             dir_left,
             dir_right,
             dir_up,
             dir_down,
-            danger_straight,
+            danger_up,
             danger_right,
+            danger_down,
             danger_left,
-            collision_before_apple
-        ]
-        state = [1 if s else 0 for s in state]
-        state += [apple_up,
+            collision_before_apple,
+            apple_up,
             apple_down,
             apple_left,
             apple_right
         ]
-        return state
 
     def display_vision(self):
         head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
@@ -280,7 +286,7 @@ class Environment:
         self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in snake])
         state = self.get_state(snake)
         action = self.agent.choose_action(state)
-        new_snake, _, is_dead, got_apple = self.step(action, snake, apples)
+        new_snake, is_dead, got_apple = self.step(action, snake, apples)
         self.update_map(new_snake, apples)
         if got_apple != None:
             apples.remove(got_apple)
@@ -303,7 +309,7 @@ class Environment:
                 self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def replay_loop(self, action, index):
-        action[index]['snake'] = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
+        snake = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
         self.canvas.delete('food')
         for food in action[index]['apples']:
             x = (food.x-1) * self.node_size
@@ -311,7 +317,7 @@ class Environment:
             self.canvas.create_rectangle(x, y, x+self.node_size,
                                     y+self.node_size, fill=behavior_colors[food.behavior],
                                     tags='food')
-        self.draw_snake(action[index]['snake'])
+        self.draw_snake(snake)
         if index < len(action)-1: self.master.after(280, lambda: self.replay_loop(action, index+1))
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
@@ -328,7 +334,7 @@ class Environment:
 
             while not done:
                 action = self.agent.choose_action(state)
-                new_snake, new_head, is_dead, got_apple = self.step(action, snake, apples)
+                new_snake, is_dead, got_apple = self.step(action, snake, apples)
                 self.update_map(new_snake, apples)
                 if got_apple != None:
                     apples.remove(got_apple)
@@ -344,7 +350,7 @@ class Environment:
                     'apples': copy.deepcopy(apples)
                 })
                 done = is_dead
-                if got_apple != None:
+                if got_apple != None and got_apple.behavior == 'good':
                     score += 1
                 i+=1
             self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
