@@ -20,8 +20,10 @@ def main():
                         help='Agent will not learn')
     parser.add_argument('-no-replay', action='store_true',
                         help='No replay of the best game during training sessions')
-    parser.add_argument('-step-by-step', type=str, default='../models/sess.json',
-                        help='Path where the model will be save')
+    parser.add_argument('-display-speed', type=int, default=30,
+                        help='Time in miliseconds between step during training phase')
+    parser.add_argument('-step-by-step', action='store_true',
+                        help='Auto-configuration of a human readable speed')
 
     args = parser.parse_args()
     
@@ -35,8 +37,10 @@ def main():
     Environment(root, agent=agent,
     dont_train=args.dont_learn,
                 visual_mode=args.visual,
-                no_replay=args.no_replay)
-    if not args.no_replay: root.mainloop()
+                no_replay=args.no_replay,
+                display_speed=args.display_speed,
+                step_by_step=args.step_by_step)
+    if not args.no_replay or args.visual == 'on': root.mainloop()
 
 if __name__ == '__main__':
     main()

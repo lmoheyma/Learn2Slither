@@ -1,8 +1,8 @@
 import random
 import numpy as np
 import json
-from tools import print_info
-from colors import UGREEN, BHRED, RED, RESET
+from tools import print_with_title
+from colors import UGREEN, BHRED, RED, BLUEB, RESET
 import os
 
 class Agent:
@@ -46,14 +46,14 @@ class Agent:
                     os.mkdir(folder)
             with open(f'{folder}/{filename}', "w") as f:
                 json.dump(self.Q_table, f, indent=4)
-            print_info(f'Model saved in {UGREEN}{filename}')
+            print_with_title('INFO', f'Model saved in {UGREEN}{filename}', BLUEB)
         except Exception:
             print(f"{BHRED}Fail to save file '{RED}{filename}{BHRED}'.{RESET}")
             exit(1)
 
     def load_q_table(self, filename):
         try:
-            print_info(f'Load trained model from {UGREEN}{filename}')
+            print_with_title('INFO', f'Load trained model from {UGREEN}{filename}', BLUEB)
             with open(filename, 'r') as file:
                 self.Q_table = json.load(file)
         except Exception:

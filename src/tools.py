@@ -1,4 +1,4 @@
-from colors import CYANB, BWHITE, RESET
+from colors import BWHITE, RESET, MAGHB
 
 def print_map(map):
     for row in map:
@@ -15,5 +15,5 @@ def get_key(dict, value):
         if val == value:
             return key
 
-def print_info(message: str) -> None:
-    print(f'{CYANB}{BWHITE}[INFO]{RESET}{BWHITE} {message}{RESET}')
+def print_with_title(title='INFO', message='Not implemented yet', bg_color=MAGHB) -> None:
+    print(f'{bg_color}{BWHITE}[{title}]{RESET}{BWHITE} {message}{RESET}')

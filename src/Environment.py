@@ -1,10 +1,11 @@
 import tkinter as tk
 import random
 import copy
+import time
 from Food import Food
 from Agent import Agent
-from tools import column, print_map, get_key
-from colors import BCYAN, RESET, BWHITE
+from tools import column, print_map, get_key, print_with_title
+from colors import BCYAN, RESET, BWHITE, BMAG, GREENB, YELLOWB
 
 behavior_colors = {
     'good': 'green',
@@ -21,7 +22,8 @@ direction = {
 class Environment:
     def __init__(self, master, width=400, height=400,
                  nb_good_food=2, nb_bad_food=1, dont_train=False,
-                 agent=Agent, visual_mode='off', no_replay=False):
+                 agent=Agent, visual_mode='off', no_replay=False,
+                 display_speed=30, step_by_step=False):
         self.master = master
         self.width = width
         self.height = height
@@ -35,13 +37,14 @@ class Environment:
         self.agent = agent
         self.visual_mode = visual_mode
         self.no_replay = no_replay
+        self.display_speed = 300 if step_by_step else display_speed
 
         master.bind('<Up>', lambda event: self.change_direction('Up'))
         master.bind('<Down>', lambda event: self.change_direction('Down'))
         master.bind('<Left>', lambda event: self.change_direction('Left'))
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
-        if not dont_train: self.train_loop()
+        if not dont_train: self.start_training()
         else:
             self.agent.epsilon = self.agent.min_epsilon
             snake, apples = self.reset()
@@ -82,7 +85,6 @@ class Environment:
         new_snake = [new_head] + snake
         if ((new_head in snake) or self.check_collision(new_head)):
             return snake, True, None
-
         for apple in apples:
             if apple == new_head:
                 got_apple = apple
@@ -159,8 +161,7 @@ class Environment:
             apple_left = 1
         except ValueError:
             apple_left = 0
-
-        return [
+        return [1 if s else 0 for s in [
             dir_left,
             dir_right,
             dir_up,
@@ -174,7 +175,7 @@ class Environment:
             apple_down,
             apple_left,
             apple_right
-        ]
+        ]]
 
     def display_vision(self, snake):
         head_x, head_y = [e for e in snake[0]]
@@ -198,10 +199,10 @@ class Environment:
 
     def check_collision(self, snake_head):
         if snake_head[0] > self.width//self.node_size or snake_head[0] < 1:
-            self.game_over = True
+            return True
         if snake_head[1] > self.height//self.node_size or snake_head[1] < 1:
-            self.game_over = True
-        return self.game_over
+            return True
+        return False
 
     def check_food(self):
         for food in self.foods:
@@ -243,6 +244,15 @@ class Environment:
             else:
                 self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='MediumPurple2', tags='snake')
 
+    def draw_apples(self, apples):
+        self.canvas.delete('food')
+        for food in apples:
+            x = (food.x-1) * self.node_size
+            y = (food.y-1) * self.node_size
+            self.canvas.create_rectangle(x, y, x+self.node_size,
+                                    y+self.node_size, fill=behavior_colors[food.behavior],
+                                    tags='food')
+
     def append_node(self):
         if self.direction == 'Up':
             self.snake.append([self.snake[-1][0], self.snake[-1][1]+self.node_size])
@@ -278,13 +288,7 @@ class Environment:
         print(direction.upper())
 
     def agent_loop(self, snake, apples):
-        self.canvas.delete('food')
-        for food in apples:
-            x = (food.x-1) * self.node_size
-            y = (food.y-1) * self.node_size
-            self.canvas.create_rectangle(x, y, x+self.node_size,
-                                    y+self.node_size, fill=behavior_colors[food.behavior],
-                                    tags='food')
+        self.draw_apples(apples)
         self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in snake])
         state = self.get_state(snake)
         action = self.agent.choose_action(state)
@@ -295,7 +299,7 @@ class Environment:
             apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
             if got_apple.behavior == 'good':
                 self.agent.score+=1
-                print(f'Score: {self.agent.score}')
+                print_with_title('GAME', f'{BWHITE}Score: {BMAG}{self.agent.score}{RESET}', YELLOWB)
         if not is_dead:
             self.master.after(280, lambda: self.agent_loop(new_snake, apples))
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
@@ -316,59 +320,123 @@ class Environment:
 
     def replay_loop(self, action, index):
         snake = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
-        self.canvas.delete('food')
-        for food in action[index]['apples']:
-            x = (food.x-1) * self.node_size
-            y = (food.y-1) * self.node_size
-            self.canvas.create_rectangle(x, y, x+self.node_size,
-                                    y+self.node_size, fill=behavior_colors[food.behavior],
-                                    tags='food')
+        self.draw_apples(action[index]['apples'])
         self.draw_snake(snake)
         if index < len(action)-1: self.master.after(280, lambda: self.replay_loop(action, index+1))
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
         for epoch in range(self.agent.epochs):
-            i = 0
-            snake, apples = self.reset()
-            self.update_map(snake, apples)
-            state = self.get_state(snake)
-            done = False
-            score = 0
+            self.i = 0
+            self.snake, self.apples = self.reset()
+            self.update_map(self.snake, self.apples)
+            self.state = self.get_state(self.snake)
+            self.done = False
+            self.score = 0
             self.game_over = False
-            game_states = []
+            self.game_states = []
 
-            while not done:
-                action = self.agent.choose_action(state)
-                if self.visual_mode == 'on':
-                    self.display_vision(snake)
-                    print(get_key(direction, action).upper(), end='\n\n')
-                new_snake, is_dead, got_apple = self.step(action, snake, apples)
-                self.update_map(new_snake, apples)
+            while not self.done:
+                action = self.agent.choose_action(self.state)
+                new_snake, is_dead, got_apple = self.step(action, self.snake, self.apples)
+                self.update_map(new_snake, self.apples)
                 if got_apple != None:
-                    apples.remove(got_apple)
-                    apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
+                    self.apples.remove(got_apple)
+                    self.apples.append(self.create_one_food((self.apples[-1].index)+1, got_apple.behavior))
                 next_state = self.get_state(new_snake)
                 reward = self.get_reward(is_dead, got_apple)
-                self.agent.update_q_value(state, action, reward, next_state)
+                self.agent.update_q_value(self.state, action, reward, next_state)
 
-                state = next_state
-                snake = new_snake
-                game_states.append({
+                self.state = next_state
+                self.snake = new_snake
+                self.game_states.append({
                     'snake': new_snake,
-                    'apples': copy.deepcopy(apples)
+                    'apples': copy.deepcopy(self.apples)
                 })
-                done = is_dead
+                self.done = is_dead
                 if got_apple != None and got_apple.behavior == 'good':
-                    score+=1
-                i+=1
+                    self.score+=1
+                self.i+=1
             self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
             self.agent.scores_history.append({
-                'score': score,
-                'game_states': game_states,
+                'score': self.score,
+                'game_states': self.game_states,
             })
-            print(f"Epoch {epoch+1}, score : {score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {i}")
+            print_with_title('TRAINING', f"Epoch {epoch+1}, score : {self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
         self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
-        print(f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+        print_with_title('TRAINING', f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
         self.agent.save_q_table(f'{self.agent.save_file}')
-        if not self.no_replay: self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+        if not self.no_replay:
+            self.master.title(f'Snake AI | Replay')
+            print_with_title('REPLAY', 'Launching replay of the best session...', GREENB)
+            self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+
+    def start_training(self):
+        self.epoch = 0
+        self.max_epochs = self.agent.epochs
+        if self.visual_mode == 'on': self.train_one_epoch()
+        else: self.train_loop()
+
+    def train_one_epoch(self):
+        if self.epoch >= self.max_epochs:
+            self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
+            print_with_title('TRAINING', f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+            self.agent.save_q_table(f'{self.agent.save_file}')
+            if not self.no_replay:
+                self.master.title(f'Snake AI | Replay')
+                print_with_title('REPLAY', 'Launching replay of the best session...', GREENB)
+                time.sleep(1)
+                self.master.after(500, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+            return
+        self.master.title(f'Snake AI | Session: {self.epoch+1}/{self.max_epochs}')
+        self.i = 0
+        self.snake, self.apples = self.reset()
+        self.update_map(self.snake, self.apples)
+        self.state = self.get_state(self.snake)
+        self.done = False
+        self.score = 0
+        self.game_states = []
+        self.train_one_step()
+
+    def train_one_step(self):
+        if self.done:
+            self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
+            self.agent.scores_history.append({
+                'score': self.score,
+                'game_states': self.game_states,
+            })
+            print_with_title('TRAINING', f"Epoch {self.epoch+1}, score : {self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
+            self.epoch += 1
+            self.master.after(100, self.train_one_epoch)
+            return
+
+        action = self.agent.choose_action(self.state)
+        self.draw_apples(self.apples)
+        self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in self.snake])
+        self.display_vision(self.snake)
+        print(get_key(direction, action).upper(), end='\n\n')
+
+        new_snake, is_dead, got_apple = self.step(action, self.snake, self.apples)
+        self.update_map(new_snake, self.apples)
+
+        if got_apple is not None:
+            self.apples.remove(got_apple)
+            self.apples.append(self.create_one_food((self.apples[-1].index)+1, got_apple.behavior))
+
+        next_state = self.get_state(new_snake)
+        reward = self.get_reward(is_dead, got_apple)
+        self.agent.update_q_value(self.state, action, reward, next_state)
+
+        self.state = next_state
+        self.snake = new_snake
+        self.done = is_dead
+
+        self.game_states.append({
+            'snake': copy.deepcopy(new_snake),
+            'apples': copy.deepcopy(self.apples)
+        })
+
+        if got_apple and got_apple.behavior == 'good':
+            self.score += 1
+        self.i += 1
+        self.master.after(self.display_speed, self.train_one_step)
