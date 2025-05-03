@@ -41,6 +41,7 @@ class Environment:
 
         if not dont_train: self.train_loop()
         else:
+            self.agent.epsilon = self.agent.min_epsilon
             snake, apples = self.reset()
             self.update_map(snake, apples)
             self.agent_loop(snake, apples)
@@ -59,12 +60,12 @@ class Environment:
                     if node == [j, i]:
                         self.map[i][j] = 'H' if node == snake[0] else 'S'
 
-    def get_reward(self, new_head, is_dead, apple):
+    def get_reward(self, is_dead, apple):
         if apple:
             return 20 if apple.behavior == 'good' else -20
         if is_dead:
-            return -40
-        return -1
+            return -50
+        return -0.2
 
     def reset(self):
         snake = self.init_snake()
@@ -92,16 +93,16 @@ class Environment:
     def get_state(self, snake):
         def check_collision(point, snake):
             x, y = point
-            if x < 0 or x >= self.width//self.node_size or y < 0 or y >= self.height//self.node_size:
+            if x <= 0 or x > self.width//self.node_size or y <= 0 or y > self.height//self.node_size:
                 return True
             if point in snake[1:]:
                 return True
             return False
         head = snake[0]
-        point_left = (head[0] - 1, head[1])
-        point_right = (head[0] + 1, head[1])
-        point_up = (head[0], head[1] - 1)
-        point_down = (head[0], head[1] + 1)
+        point_left = (head[0]-1, head[1])
+        point_right = (head[0]+1, head[1])
+        point_up = (head[0], head[1]-1)
+        point_down = (head[0], head[1]+1)
 
         dir_left = snake[1][0] > head[0]
         dir_right = snake[1][0] < head[0]
@@ -126,10 +127,33 @@ class Environment:
             danger_left = check_collision(point_up, snake)
 
         head_x, head_y = snake[0]
-        apple_up = ('G' or 'R') in column(self.map[:head_y], head_x)
-        apple_right = ('G' or 'R') in self.map[head_y][head_x+1:]
-        apple_down = ('G' or 'R') in column(self.map[head_y+1:], head_x)
-        apple_left = ('G' or 'R') in self.map[head_y][:head_x]
+        collision_before_apple = False
+
+        # print_map(self.map)
+        try:
+            apple_up = head_y - column(self.map[:head_y], head_x).index('G')
+            collision_before_apple = 'S' in column(self.map[abs(apple_up-head_y):head_y], head_x) and dir_up
+            # print('up', column(self.map[abs(apple_up-head_y):head_y], head_x))
+        except ValueError:
+            apple_up = 0
+        try:
+            apple_right = self.map[head_y][head_x+1:].index('G')+1
+            collision_before_apple = 'S' in self.map[head_y][head_x+1:head_x+apple_right+1] and dir_right
+            # print('right', self.map[head_y][head_x+1:head_x+apple_right+1])
+        except ValueError:
+            apple_right = 0
+        try:
+            apple_down = column(self.map[head_y+1:], head_x).index('G')+1
+            collision_before_apple = 'S' in column(self.map[head_y+1:head_y+apple_down+1], head_x) and dir_down
+            # print('down', column(self.map[head_y+1:head_y+apple_down+1], head_x))
+        except ValueError:
+            apple_down = 0
+        try:
+            apple_left = head_x - self.map[head_y][:head_x].index('G')
+            collision_before_apple = 'S' in self.map[head_y][abs(apple_left-head_x):head_x] and dir_left
+            # print('left', self.map[head_y][abs(apple_left-head_x):head_x])
+        except ValueError:
+            apple_left = 0
 
         state = [
             dir_left,
@@ -139,12 +163,18 @@ class Environment:
             danger_straight,
             danger_right,
             danger_left,
-            apple_up,
+            collision_before_apple
+        ]
+        # if collision_before_apple: print_map(self.map)
+        state = [1 if s else 0 for s in state]
+        state += [apple_up,
             apple_down,
             apple_left,
             apple_right
         ]
-        return [1 if s else 0 for s in state]
+        # print_map(self.map)
+        # print(state)
+        return state
 
     def display_vision(self):
         head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
@@ -158,8 +188,8 @@ class Environment:
         print()
 
     def init_snake(self):
-        snake_head_x = random.randint(0, (self.width//self.node_size)-1) * self.node_size
-        snake_head_y = random.randint(0, (self.width//self.node_size)-1) * self.node_size
+        snake_head_x = random.randint(1, (self.width//self.node_size)-2) * self.node_size
+        snake_head_y = random.randint(1, (self.width//self.node_size)) * self.node_size
         snake = [[snake_head_x, snake_head_y]]
         for _ in range(2):
             new_node = [snake[-1][0]+self.node_size, snake[-1][1]]
@@ -286,7 +316,6 @@ class Environment:
 
     def replay_loop(self, action, index):
         action[index]['snake'] = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
-        print(action[index]['snake'])
         self.canvas.delete('food')
         for food in action[index]['apples']:
             x = (food.x-1) * self.node_size
@@ -299,7 +328,6 @@ class Environment:
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
-        best_score = 0
         for epoch in range(self.agent.epochs):
             i = 0
             snake, apples = self.reset()
@@ -318,7 +346,7 @@ class Environment:
                     apples.remove(got_apple)
                     apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
                 next_state = self.get_state(new_snake)
-                reward = self.get_reward(new_head, is_dead, got_apple)
+                reward = self.get_reward(is_dead, got_apple)
                 self.agent.update_q_value(state, action, reward, next_state)
 
                 state = next_state
@@ -336,9 +364,6 @@ class Environment:
                 'score': score,
                 'game_states': game_states,
             })
-            if score > best_score:
-                best_score = score
-                self.agent.saved_table = self.agent.Q_table
             print(f"Epoch {epoch+1}, score : {score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {i}")
         self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
         print(f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
