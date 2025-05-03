@@ -129,29 +129,24 @@ class Environment:
         head_x, head_y = snake[0]
         collision_before_apple = False
 
-        # print_map(self.map)
         try:
             apple_up = head_y - column(self.map[:head_y], head_x).index('G')
             collision_before_apple = 'S' in column(self.map[abs(apple_up-head_y):head_y], head_x) and dir_up
-            # print('up', column(self.map[abs(apple_up-head_y):head_y], head_x))
         except ValueError:
             apple_up = 0
         try:
             apple_right = self.map[head_y][head_x+1:].index('G')+1
             collision_before_apple = 'S' in self.map[head_y][head_x+1:head_x+apple_right+1] and dir_right
-            # print('right', self.map[head_y][head_x+1:head_x+apple_right+1])
         except ValueError:
             apple_right = 0
         try:
             apple_down = column(self.map[head_y+1:], head_x).index('G')+1
             collision_before_apple = 'S' in column(self.map[head_y+1:head_y+apple_down+1], head_x) and dir_down
-            # print('down', column(self.map[head_y+1:head_y+apple_down+1], head_x))
         except ValueError:
             apple_down = 0
         try:
             apple_left = head_x - self.map[head_y][:head_x].index('G')
             collision_before_apple = 'S' in self.map[head_y][abs(apple_left-head_x):head_x] and dir_left
-            # print('left', self.map[head_y][abs(apple_left-head_x):head_x])
         except ValueError:
             apple_left = 0
 
@@ -165,15 +160,12 @@ class Environment:
             danger_left,
             collision_before_apple
         ]
-        # if collision_before_apple: print_map(self.map)
         state = [1 if s else 0 for s in state]
         state += [apple_up,
             apple_down,
             apple_left,
             apple_right
         ]
-        # print_map(self.map)
-        # print(state)
         return state
 
     def display_vision(self):
@@ -220,9 +212,6 @@ class Environment:
 
     def create_one_food(self, index, behavior='good'):
         food = Food(self.width, self.height, self.node_size, index, behavior)
-        # self.canvas.create_rectangle(food.x, food.y, food.x+self.node_size,
-        #                              food.y+self.node_size, fill=behavior_colors[behavior],
-        #                              tags=f'food{index}')
         food.x //=self.node_size
         food.y //=self.node_size
         return food
@@ -281,7 +270,6 @@ class Environment:
         print(direction.upper())
 
     def agent_loop(self, snake, apples):
-        # snake = [[((coord-1)*self.node_size) for coord in node] for node in snake]
         self.canvas.delete('food')
         for food in apples:
             x = (food.x-1) * self.node_size
