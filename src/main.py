@@ -12,12 +12,14 @@ def main():
                         help='Name of the model file to save')
     parser.add_argument('-visual', type=str,
                         choices=['on', 'off'],
-                        default='on',
+                        default='off',
                         help="Visual mode: 'on' or 'off'")
     parser.add_argument('-load', type=str,
                         help='Path of the model to load')
     parser.add_argument('-dont-learn', action='store_true',
                         help='Agent will not learn')
+    parser.add_argument('-no-replay', action='store_true',
+                        help='No replay of the best game during training sessions')
     parser.add_argument('-step-by-step', type=str, default='../models/sess.json',
                         help='Path where the model will be save')
 
@@ -30,8 +32,11 @@ def main():
         save_file = f'{args.sessions}sess.json'
     agent = Agent(args.sessions, save_file)
     if args.load is not None: agent.load_q_table(args.load)
-    Environment(root, agent=agent, dont_train=args.dont_learn)
-    root.mainloop()
+    Environment(root, agent=agent,
+    dont_train=args.dont_learn,
+                visual_mode=args.visual,
+                no_replay=args.no_replay)
+    if not args.no_replay: root.mainloop()
 
 if __name__ == '__main__':
     main()

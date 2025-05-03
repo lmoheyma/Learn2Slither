@@ -21,7 +21,7 @@ direction = {
 class Environment:
     def __init__(self, master, width=400, height=400,
                  nb_good_food=2, nb_bad_food=1, dont_train=False,
-                 agent=Agent):
+                 agent=Agent, visual_mode='off', no_replay=False):
         self.master = master
         self.width = width
         self.height = height
@@ -33,6 +33,8 @@ class Environment:
         self.direction = 'Left'
         self.game_over = False
         self.agent = agent
+        self.visual_mode = visual_mode
+        self.no_replay = no_replay
 
         master.bind('<Up>', lambda event: self.change_direction('Up'))
         master.bind('<Down>', lambda event: self.change_direction('Down'))
@@ -174,8 +176,8 @@ class Environment:
             apple_right
         ]
 
-    def display_vision(self):
-        head_x, head_y = [(e//self.node_size)+1 for e in self.snake[0]]
+    def display_vision(self, snake):
+        head_x, head_y = [e for e in snake[0]]
         self.vision_map = copy.deepcopy(self.map)
         for i in range(len(self.map)):
             for j in range(len(self.map[i])):
@@ -291,7 +293,11 @@ class Environment:
         if got_apple != None:
             apples.remove(got_apple)
             apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
-        if not is_dead: self.master.after(280, lambda: self.agent_loop(new_snake, apples))
+            if got_apple.behavior == 'good':
+                self.agent.score+=1
+                print(f'Score: {self.agent.score}')
+        if not is_dead:
+            self.master.after(280, lambda: self.agent_loop(new_snake, apples))
         else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
 
     def game_loop(self):
@@ -334,6 +340,9 @@ class Environment:
 
             while not done:
                 action = self.agent.choose_action(state)
+                if self.visual_mode == 'on':
+                    self.display_vision(snake)
+                    print(get_key(direction, action).upper(), end='\n\n')
                 new_snake, is_dead, got_apple = self.step(action, snake, apples)
                 self.update_map(new_snake, apples)
                 if got_apple != None:
@@ -351,7 +360,7 @@ class Environment:
                 })
                 done = is_dead
                 if got_apple != None and got_apple.behavior == 'good':
-                    score += 1
+                    score+=1
                 i+=1
             self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
             self.agent.scores_history.append({
@@ -362,4 +371,4 @@ class Environment:
         self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
         print(f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
         self.agent.save_q_table(f'{self.agent.save_file}')
-        self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+        if not self.no_replay: self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))

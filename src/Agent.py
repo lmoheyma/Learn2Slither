@@ -18,6 +18,7 @@ class Agent:
         self.scores_history = []
         self.movements = []
         self.save_file = save_file
+        self.score = 0
 
     def choose_action(self, state):
         state_str = str(state)
