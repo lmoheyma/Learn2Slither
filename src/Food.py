@@ -6,6 +6,7 @@ food_tags = {
     'bad': 'R'
 }
 
+
 @dataclass
 class Food:
     def __init__(self, width, height, node_size, index, behavior='good'):
@@ -18,7 +19,7 @@ class Food:
 
     def __eq__(self, other):
         if isinstance(other, (list, tuple)) and len(other) == 2:
-            return self.x== other[0] and self.y == other[1]
+            return self.x == other[0] and self.y == other[1]
         return False
 
     def __repr__(self):

@@ -5,6 +5,7 @@ from tools import print_with_title
 from colors import UGREEN, BHRED, RED, BLUEB, RESET
 import os
 
+
 class Agent:
     def __init__(self, epochs, save_file):
         self.Q_table = {}
@@ -37,23 +38,26 @@ class Agent:
             self.Q_table[next_state_str] = [0.0 for _ in self.actions]
 
         best_next = max(self.Q_table[next_state_str])
-        self.Q_table[state_str][action] += self.learning_rate * (reward + self.gamma * best_next - self.Q_table[state_str][action])
+        self.Q_table[state_str][action] += self.learning_rate * \
+            (reward + self.gamma * best_next - self.Q_table[state_str][action])
 
     def save_q_table(self, filename='sess.json'):
         folder = '../models'
         try:
             if not os.path.isdir(folder):
-                    os.mkdir(folder)
+                os.mkdir(folder)
             with open(f'{folder}/{filename}', "w") as f:
                 json.dump(self.Q_table, f, indent=4)
-            print_with_title('INFO', f'Model saved in {UGREEN}{filename}', BLUEB)
+            print_with_title('INFO', f'Model saved in {UGREEN}{filename}',
+                             BLUEB)
         except Exception:
             print(f"{BHRED}Fail to save file '{RED}{filename}{BHRED}'.{RESET}")
             exit(1)
 
     def load_q_table(self, filename):
         try:
-            print_with_title('INFO', f'Load trained model from {UGREEN}{filename}', BLUEB)
+            print_with_title('INFO', f'Load trained model from \
+{UGREEN}{filename}', BLUEB)
             with open(filename, 'r') as file:
                 self.Q_table = json.load(file)
         except Exception:

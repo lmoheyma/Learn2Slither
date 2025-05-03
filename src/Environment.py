@@ -4,7 +4,7 @@ import copy
 import time
 from Food import Food
 from Agent import Agent
-from tools import column, print_map, get_key, print_with_title
+from tools import column, get_key, print_with_title
 from colors import BCYAN, RESET, BWHITE, BMAG, GREENB, YELLOWB
 
 behavior_colors = {
@@ -18,6 +18,7 @@ direction = {
     'Left': 2,
     'Right': 3
 }
+
 
 class Environment:
     def __init__(self, master, width=400, height=400,
@@ -44,7 +45,8 @@ class Environment:
         master.bind('<Left>', lambda event: self.change_direction('Left'))
         master.bind('<Right>', lambda event: self.change_direction('Right'))
 
-        if not dont_train: self.start_training()
+        if not dont_train:
+            self.start_training()
         else:
             self.agent.epsilon = self.agent.min_epsilon
             snake, apples = self.reset()
@@ -55,8 +57,8 @@ class Environment:
         self.map = [[0] * 12 for _ in range(12)]
         for i in range(len(self.map)):
             for j in range(len(self.map[i])):
-                if i == 0 or i == len(self.map)-1 or\
-                j == 0 or j == len(self.map[i])-1:
+                if i == 0 or i == len(self.map)-1 or \
+                        j == 0 or j == len(self.map[i])-1:
                     self.map[i][j] = 'W'
                 for food in foods:
                     if food == [j, i]:
@@ -97,7 +99,8 @@ class Environment:
     def get_state(self, snake):
         def check_collision(point, snake):
             x, y = point
-            if x <= 0 or x > self.width//self.node_size or y <= 0 or y > self.height//self.node_size:
+            if x <= 0 or x > self.width//self.node_size or y <= 0 or \
+                    y > self.height//self.node_size:
                 return True
             if point in snake[1:]:
                 return True
@@ -139,25 +142,29 @@ class Environment:
 
         try:
             apple_up = head_y - column(self.map[:head_y], head_x).index('G')
-            collision_before_apple = 'S' in column(self.map[abs(apple_up-head_y):head_y], head_x) and dir_up
+            collision_before_apple = 'S' in column(self.map[
+                abs(apple_up-head_y):head_y], head_x) and dir_up
             apple_up = 1
         except ValueError:
             apple_up = 0
         try:
             apple_right = self.map[head_y][head_x+1:].index('G')+1
-            collision_before_apple = 'S' in self.map[head_y][head_x+1:head_x+apple_right+1] and dir_right
+            collision_before_apple = 'S' in self.map[head_y][
+                head_x+1:head_x+apple_right+1] and dir_right
             apple_right = 1
         except ValueError:
             apple_right = 0
         try:
             apple_down = column(self.map[head_y+1:], head_x).index('G')+1
-            collision_before_apple = 'S' in column(self.map[head_y+1:head_y+apple_down+1], head_x) and dir_down
+            collision_before_apple = 'S' in column(self.map[
+                head_y+1:head_y+apple_down+1], head_x) and dir_down
             apple_down = 1
         except ValueError:
             apple_down = 0
         try:
             apple_left = head_x - self.map[head_y][:head_x].index('G')
-            collision_before_apple = 'S' in self.map[head_y][abs(apple_left-head_x):head_x] and dir_left
+            collision_before_apple = 'S' in self.map[head_y][
+                abs(apple_left-head_x):head_x] and dir_left
             apple_left = 1
         except ValueError:
             apple_left = 0
@@ -189,8 +196,10 @@ class Environment:
         print()
 
     def init_snake(self):
-        snake_head_x = random.randint(1, (self.width//self.node_size)-2) * self.node_size
-        snake_head_y = random.randint(1, (self.width//self.node_size)) * self.node_size
+        snake_head_x = random.randint(1, (self.width//self.node_size)-2) \
+            * self.node_size
+        snake_head_y = random.randint(1, (self.width//self.node_size)) \
+            * self.node_size
         snake = [[snake_head_x, snake_head_y]]
         for _ in range(2):
             new_node = [snake[-1][0]+self.node_size, snake[-1][1]]
@@ -215,34 +224,42 @@ class Environment:
                     self.canvas.delete(self.snake[-1])
                     self.snake.pop()
                     if len(self.snake) < 1:
-                        self.game_over= True
+                        self.game_over = True
                         return
-                self.foods.append(self.create_one_food(self.foods[-1].index+1, food.behavior))
+                self.foods.append(self.create_one_food(self.foods[-1].index+1,
+                                                       food.behavior))
 
     def create_one_food(self, index, behavior='good'):
         food = Food(self.width, self.height, self.node_size, index, behavior)
-        food.x //=self.node_size
-        food.y //=self.node_size
+        food.x //= self.node_size
+        food.y //= self.node_size
         return food
 
     def create_foods(self, nb_good_food, nb_bad_food):
         foods = []
         i = 0
-        for _ in range(nb_good_food): # Green food
+        for _ in range(nb_good_food):
             foods.append(self.create_one_food(index=i))
-            i+=1
-        for _ in range(nb_bad_food): # Red food
+            i += 1
+        for _ in range(nb_bad_food):
             foods.append(self.create_one_food(index=i, behavior='bad'))
-            i+=1
+            i += 1
         return foods
 
     def draw_snake(self, snake):
         self.canvas.delete('snake')
         for node in snake:
-            if node == snake[0]: 
-                self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='purple2', tags='snake')
+            if node == snake[0]:
+                self.canvas.create_rectangle(node[0], node[1],
+                                             node[0] + self.node_size,
+                                             node[1]+self.node_size,
+                                             fill='purple2', tags='snake')
             else:
-                self.canvas.create_rectangle(node[0], node[1], node[0]+self.node_size, node[1]+self.node_size, fill='MediumPurple2', tags='snake')
+                self.canvas.create_rectangle(node[0], node[1],
+                                             node[0]+self.node_size,
+                                             node[1]+self.node_size,
+                                             fill='MediumPurple2',
+                                             tags='snake')
 
     def draw_apples(self, apples):
         self.canvas.delete('food')
@@ -250,29 +267,40 @@ class Environment:
             x = (food.x-1) * self.node_size
             y = (food.y-1) * self.node_size
             self.canvas.create_rectangle(x, y, x+self.node_size,
-                                    y+self.node_size, fill=behavior_colors[food.behavior],
-                                    tags='food')
+                                         y+self.node_size,
+                                         fill=behavior_colors[
+                                            food.behavior],
+                                         tags='food')
 
     def append_node(self):
         if self.direction == 'Up':
-            self.snake.append([self.snake[-1][0], self.snake[-1][1]+self.node_size])
+            self.snake.append([self.snake[-1][0],
+                               self.snake[-1][1]+self.node_size])
         elif self.direction == 'Right':
-            self.snake.append([self.snake[-1][0]-self.node_size, self.snake[-1][1]])
+            self.snake.append([self.snake[-1][0]-self.node_size,
+                               self.snake[-1][1]])
         elif self.direction == 'Down':
-            self.snake.append([self.snake[-1][0], self.snake[-1][1]-self.node_size])
+            self.snake.append([self.snake[-1][0],
+                               self.snake[-1][1]-self.node_size])
         elif self.direction == 'Left':
-            self.snake.append([self.snake[-1][0]+self.node_size, self.snake[-1][1]])
+            self.snake.append([self.snake[-1][0]+self.node_size,
+                               self.snake[-1][1]])
 
     def move_snake(self):
-        if self.game_over: return
+        if self.game_over:
+            return
         if self.direction == 'Up':
-            self.snake.insert(0, [self.snake[0][0], self.snake[0][1]-self.node_size])
+            self.snake.insert(0, [self.snake[0][0],
+                                  self.snake[0][1]-self.node_size])
         elif self.direction == 'Right':
-            self.snake.insert(0, [self.snake[0][0]+self.node_size, self.snake[0][1]])
+            self.snake.insert(0, [self.snake[0][0]+self.node_size,
+                                  self.snake[0][1]])
         elif self.direction == 'Down':
-            self.snake.insert(0, [self.snake[0][0], self.snake[0][1]+self.node_size])
+            self.snake.insert(0, [self.snake[0][0],
+                                  self.snake[0][1]+self.node_size])
         elif self.direction == 'Left':
-            self.snake.insert(0, [self.snake[0][0]-self.node_size, self.snake[0][1]])
+            self.snake.insert(0, [self.snake[0][0]-self.node_size,
+                                  self.snake[0][1]])
         self.canvas.delete(self.snake[-1])
         self.snake.pop()
 
@@ -289,20 +317,25 @@ class Environment:
 
     def agent_loop(self, snake, apples):
         self.draw_apples(apples)
-        self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in snake])
+        self.draw_snake([[((coord-1)*self.node_size) for coord in node]
+                         for node in snake])
         state = self.get_state(snake)
         action = self.agent.choose_action(state)
         new_snake, is_dead, got_apple = self.step(action, snake, apples)
         self.update_map(new_snake, apples)
-        if got_apple != None:
+        if got_apple is not None:
             apples.remove(got_apple)
-            apples.append(self.create_one_food((apples[-1].index)+1, got_apple.behavior))
+            apples.append(self.create_one_food((apples[-1].index)+1,
+                                               got_apple.behavior))
             if got_apple.behavior == 'good':
-                self.agent.score+=1
-                print_with_title('GAME', f'{BWHITE}Score: {BMAG}{self.agent.score}{RESET}', YELLOWB)
+                self.agent.score += 1
+                print_with_title('GAME', f'{BWHITE}Score: \
+{BMAG}{self.agent.score}{RESET}', YELLOWB)
         if not is_dead:
             self.master.after(280, lambda: self.agent_loop(new_snake, apples))
-        else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
+        else:
+            self.canvas.create_text(200, 200, text="Game Over!", fill='white',
+                                    font=('Helvetica', 30))
 
     def game_loop(self):
         if not self.game_over:
@@ -316,14 +349,19 @@ class Environment:
                 self.get_state(self.snake)
                 self.master.after(380, self.game_loop)
             else:
-                self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
+                self.canvas.create_text(200, 200, text="Game Over!",
+                                        fill='white', font=('Helvetica', 30))
 
     def replay_loop(self, action, index):
-        snake = [[((coord-1)*self.node_size) for coord in node] for node in action[index]['snake']]
+        snake = [[((coord-1)*self.node_size) for coord in node]
+                 for node in action[index]['snake']]
         self.draw_apples(action[index]['apples'])
         self.draw_snake(snake)
-        if index < len(action)-1: self.master.after(280, lambda: self.replay_loop(action, index+1))
-        else: self.canvas.create_text(200, 200, text="Game Over!", fill='white', font=('Helvetica', 30))
+        if index < len(action) - 1:
+            self.master.after(280, lambda: self.replay_loop(action, index+1))
+        else:
+            self.canvas.create_text(200, 200, text="Game Over!",
+                                    fill='white', font=('Helvetica', 30))
 
     def train_loop(self):
         for epoch in range(self.agent.epochs):
@@ -338,14 +376,17 @@ class Environment:
 
             while not self.done:
                 action = self.agent.choose_action(self.state)
-                new_snake, is_dead, got_apple = self.step(action, self.snake, self.apples)
+                new_snake, is_dead, got_apple = self.step(action, self.snake,
+                                                          self.apples)
                 self.update_map(new_snake, self.apples)
-                if got_apple != None:
+                if got_apple is not None:
                     self.apples.remove(got_apple)
-                    self.apples.append(self.create_one_food((self.apples[-1].index)+1, got_apple.behavior))
+                    self.apples.append(self.create_one_food(
+                        (self.apples[-1].index)+1, got_apple.behavior))
                 next_state = self.get_state(new_snake)
                 reward = self.get_reward(is_dead, got_apple)
-                self.agent.update_q_value(self.state, action, reward, next_state)
+                self.agent.update_q_value(self.state, action, reward,
+                                          next_state)
 
                 self.state = next_state
                 self.snake = new_snake
@@ -354,41 +395,55 @@ class Environment:
                     'apples': copy.deepcopy(self.apples)
                 })
                 self.done = is_dead
-                if got_apple != None and got_apple.behavior == 'good':
-                    self.score+=1
-                self.i+=1
-            self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
+                if got_apple is not None and got_apple.behavior == 'good':
+                    self.score += 1
+                self.i += 1
+            self.agent.epsilon = max(self.agent.min_epsilon,
+                                     self.agent.epsilon *
+                                     self.agent.epsilon_decay)
             self.agent.scores_history.append({
                 'score': self.score,
                 'game_states': self.game_states,
             })
-            print_with_title('TRAINING', f"Epoch {epoch+1}, score : {self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
-        self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
-        print_with_title('TRAINING', f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+            print_with_title('TRAINING', f"Epoch {epoch+1}, score : \
+{self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
+        self.agent.scores_history = sorted(self.agent.scores_history,
+                                           key=lambda x: x['score'])
+        print_with_title('TRAINING', f'{BCYAN}Best score : \
+{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
         self.agent.save_q_table(f'{self.agent.save_file}')
         if not self.no_replay:
-            self.master.title(f'Snake AI | Replay')
-            print_with_title('REPLAY', 'Launching replay of the best session...', GREENB)
-            self.master.after(380, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+            self.master.title('Snake AI | Replay')
+            print_with_title('REPLAY', 'Launching replay of the best '
+                             'session...', GREENB)
+            self.master.after(380, lambda: self.replay_loop(
+                self.agent.scores_history[-1]["game_states"], 0))
 
     def start_training(self):
         self.epoch = 0
         self.max_epochs = self.agent.epochs
-        if self.visual_mode == 'on': self.train_one_epoch()
-        else: self.train_loop()
+        if self.visual_mode == 'on':
+            self.train_one_epoch()
+        else:
+            self.train_loop()
 
     def train_one_epoch(self):
         if self.epoch >= self.max_epochs:
-            self.agent.scores_history = sorted(self.agent.scores_history, key=lambda x: x['score'])
-            print_with_title('TRAINING', f'{BCYAN}Best score : {BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+            self.agent.scores_history = sorted(self.agent.scores_history,
+                                               key=lambda x: x['score'])
+            print_with_title('TRAINING', f'{BCYAN}Best score : \
+{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
             self.agent.save_q_table(f'{self.agent.save_file}')
             if not self.no_replay:
-                self.master.title(f'Snake AI | Replay')
-                print_with_title('REPLAY', 'Launching replay of the best session...', GREENB)
+                self.master.title('Snake AI | Replay')
+                print_with_title('REPLAY', 'Launching replay of the best '
+                                 'session...', GREENB)
                 time.sleep(1)
-                self.master.after(500, lambda: self.replay_loop(self.agent.scores_history[-1]["game_states"], 0))
+                self.master.after(500, lambda: self.replay_loop(
+                    self.agent.scores_history[-1]["game_states"], 0))
             return
-        self.master.title(f'Snake AI | Session: {self.epoch+1}/{self.max_epochs}')
+        self.master.title(f'Snake AI | Session: \
+{self.epoch+1}/{self.max_epochs}')
         self.i = 0
         self.snake, self.apples = self.reset()
         self.update_map(self.snake, self.apples)
@@ -400,28 +455,34 @@ class Environment:
 
     def train_one_step(self):
         if self.done:
-            self.agent.epsilon = max(self.agent.min_epsilon, self.agent.epsilon * self.agent.epsilon_decay)
+            self.agent.epsilon = max(self.agent.min_epsilon,
+                                     self.agent.epsilon *
+                                     self.agent.epsilon_decay)
             self.agent.scores_history.append({
                 'score': self.score,
                 'game_states': self.game_states,
             })
-            print_with_title('TRAINING', f"Epoch {self.epoch+1}, score : {self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
+            print_with_title('TRAINING', f"Epoch {self.epoch+1}, score : \
+{self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
             self.epoch += 1
             self.master.after(100, self.train_one_epoch)
             return
 
         action = self.agent.choose_action(self.state)
         self.draw_apples(self.apples)
-        self.draw_snake([[((coord-1)*self.node_size) for coord in node] for node in self.snake])
+        self.draw_snake([[((coord-1)*self.node_size) for coord in node]
+                         for node in self.snake])
         self.display_vision(self.snake)
         print(get_key(direction, action).upper(), end='\n\n')
 
-        new_snake, is_dead, got_apple = self.step(action, self.snake, self.apples)
+        new_snake, is_dead, got_apple = self.step(action, self.snake,
+                                                  self.apples)
         self.update_map(new_snake, self.apples)
 
         if got_apple is not None:
             self.apples.remove(got_apple)
-            self.apples.append(self.create_one_food((self.apples[-1].index)+1, got_apple.behavior))
+            self.apples.append(self.create_one_food((self.apples[-1].index)+1,
+                                                    got_apple.behavior))
 
         next_state = self.get_state(new_snake)
         reward = self.get_reward(is_dead, got_apple)
