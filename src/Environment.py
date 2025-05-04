@@ -4,8 +4,9 @@ import copy
 import time
 from Food import Food
 from Agent import Agent
-from tools import column, get_key, print_with_title
-from colors import BCYAN, RESET, BWHITE, BMAG, GREENB, YELLOWB
+from tools import column, get_key, print_with_title, print_inplace
+from colors import BCYAN, RESET, BWHITE, BMAG, GREENB, \
+    YELLOWB, WHITEB, BLACKB, REDB, MAGB, MAGHB, WHITE
 
 behavior_colors = {
     'good': 'green',
@@ -19,6 +20,16 @@ direction = {
     'Right': 3
 }
 
+bg_colors = {
+    'W': BLACKB,
+    'G': GREENB,
+    'R': REDB,
+    'H': MAGB,
+    'S': MAGHB,
+    ' ': WHITEB,
+    '0': YELLOWB
+}
+
 
 class Environment:
     def __init__(self, master, width=400, height=400,
@@ -29,7 +40,8 @@ class Environment:
         self.width = width
         self.height = height
         self.node_size = 40
-        self.canvas = tk.Canvas(master, width=width, height=height, bg='black')
+        self.canvas = tk.Canvas(master, width=width, height=height,
+                                bg='old lace')
         self.canvas.pack()
         self.snake = self.init_snake()
         self.foods = self.create_foods(nb_good_food, nb_bad_food)
@@ -69,10 +81,10 @@ class Environment:
 
     def get_reward(self, is_dead, apple):
         if apple:
-            return 20 if apple.behavior == 'good' else -40
+            return 1 if apple.behavior == 'good' else -1.5
         if is_dead:
-            return -50
-        return -1
+            return -6
+        return -0.1
 
     def reset(self):
         snake = self.init_snake()
@@ -187,11 +199,14 @@ class Environment:
     def display_vision(self, snake):
         head_x, head_y = [e for e in snake[0]]
         self.vision_map = copy.deepcopy(self.map)
+        print('\033[H\033[J', end='')
+        print('\n' * 4)
         for i in range(len(self.map)):
             for j in range(len(self.map[i])):
                 if j != head_x and i != head_y:
                     self.vision_map[i][j] = ' '
-                print(self.vision_map[i][j], end=' ')
+                print(f'{WHITE}{bg_colors[str(self.vision_map[i][j])]} \
+{self.vision_map[i][j]} {RESET}', end='')
             print()
         print()
 
@@ -323,19 +338,21 @@ class Environment:
         action = self.agent.choose_action(state)
         new_snake, is_dead, got_apple = self.step(action, snake, apples)
         self.update_map(new_snake, apples)
+        if self.visual_mode:
+            self.display_vision(snake)
         if got_apple is not None:
             apples.remove(got_apple)
             apples.append(self.create_one_food((apples[-1].index)+1,
                                                got_apple.behavior))
             if got_apple.behavior == 'good':
                 self.agent.score += 1
-                print_with_title('GAME', f'{BWHITE}Score: \
+        print_with_title('GAME', f'{BWHITE}Score: \
 {BMAG}{self.agent.score}{RESET}', YELLOWB)
         if not is_dead:
             self.master.after(280, lambda: self.agent_loop(new_snake, apples))
         else:
-            self.canvas.create_text(200, 200, text="Game Over!", fill='white',
-                                    font=('Helvetica', 30))
+            self.canvas.create_text(200, 200, text="Game Over!", fill='black',
+                                    font=('Verdana', 30))
 
     def game_loop(self):
         if not self.game_over:
@@ -350,7 +367,7 @@ class Environment:
                 self.master.after(380, self.game_loop)
             else:
                 self.canvas.create_text(200, 200, text="Game Over!",
-                                        fill='white', font=('Helvetica', 30))
+                                        fill='black', font=('Verdana', 30))
 
     def replay_loop(self, action, index):
         snake = [[((coord-1)*self.node_size) for coord in node]
@@ -361,7 +378,7 @@ class Environment:
             self.master.after(280, lambda: self.replay_loop(action, index+1))
         else:
             self.canvas.create_text(200, 200, text="Game Over!",
-                                    fill='white', font=('Helvetica', 30))
+                                    fill='black', font=('Verdana', 30))
 
     def train_loop(self):
         for epoch in range(self.agent.epochs):
@@ -405,12 +422,12 @@ class Environment:
                 'score': self.score,
                 'game_states': self.game_states,
             })
-            print_with_title('TRAINING', f"Epoch {epoch+1}, score : \
+            print_inplace('TRAINING', f"Epoch {epoch+1}, score : \
 {self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
         self.agent.scores_history = sorted(self.agent.scores_history,
                                            key=lambda x: x['score'])
         print_with_title('TRAINING', f'{BCYAN}Best score : \
-{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}', start_caracter='\n')
         self.agent.save_q_table(f'{self.agent.save_file}')
         if not self.no_replay:
             self.master.title('Snake AI | Replay')
@@ -432,7 +449,7 @@ class Environment:
             self.agent.scores_history = sorted(self.agent.scores_history,
                                                key=lambda x: x['score'])
             print_with_title('TRAINING', f'{BCYAN}Best score : \
-{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}')
+{BWHITE}{self.agent.scores_history[-1]["score"]}{RESET}', start_caracter='\n')
             self.agent.save_q_table(f'{self.agent.save_file}')
             if not self.no_replay:
                 self.master.title('Snake AI | Replay')
@@ -462,8 +479,6 @@ class Environment:
                 'score': self.score,
                 'game_states': self.game_states,
             })
-            print_with_title('TRAINING', f"Epoch {self.epoch+1}, score : \
-{self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
             self.epoch += 1
             self.master.after(100, self.train_one_epoch)
             return
@@ -473,8 +488,10 @@ class Environment:
         self.draw_snake([[((coord-1)*self.node_size) for coord in node]
                          for node in self.snake])
         self.display_vision(self.snake)
-        print(get_key(direction, action).upper(), end='\n\n')
-
+        print(f'{BWHITE}{get_key(direction, action).upper()}{RESET}',
+              end='\n\n')
+        print_inplace('TRAINING', f"Epoch {self.epoch+1}, score : \
+{self.score}, epsilon : {self.agent.epsilon:.3f}, nb_iter : {self.i}")
         new_snake, is_dead, got_apple = self.step(action, self.snake,
                                                   self.apples)
         self.update_map(new_snake, self.apples)

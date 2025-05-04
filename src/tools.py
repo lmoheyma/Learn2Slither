@@ -1,4 +1,5 @@
 from colors import BWHITE, RESET, MAGHB
+from argparse import ArgumentTypeError
 
 
 def print_map(map):
@@ -19,6 +20,20 @@ def get_key(dict, value):
             return key
 
 
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
+
+
+def print_inplace(title='INFO', message='Not implemented yet',
+                  bg_color=MAGHB) -> None:
+    print(f'{bg_color}{BWHITE}[{title}]{RESET}{BWHITE} {message}{RESET}\r',
+          end='', flush=True)
+
+
 def print_with_title(title='INFO', message='Not implemented yet',
-                     bg_color=MAGHB) -> None:
-    print(f'{bg_color}{BWHITE}[{title}]{RESET}{BWHITE} {message}{RESET}')
+                     bg_color=MAGHB, start_caracter='') -> None:
+    print(f'{start_caracter}{bg_color}{BWHITE}[{title}]{RESET}{BWHITE} \
+{message}{RESET}')

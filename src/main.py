@@ -2,12 +2,13 @@ from Environment import Environment
 from Agent import Agent
 import tkinter as tk
 from argparse import ArgumentParser
+from tools import check_positive
 
 
 def main():
     parser = ArgumentParser(
         description='Learn2Slither')
-    parser.add_argument('-sessions', type=int, default=1000,
+    parser.add_argument('-sessions', default=1000, type=check_positive,
                         help='Number of training sessions for the agent')
     parser.add_argument('-save', type=str,
                         help='Name of the model file to save')
