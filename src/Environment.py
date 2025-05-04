@@ -344,10 +344,8 @@ class Environment:
             apples.remove(got_apple)
             apples.append(self.create_one_food((apples[-1].index)+1,
                                                got_apple.behavior))
-            if got_apple.behavior == 'good':
-                self.agent.score += 1
         print_with_title('GAME', f'{BWHITE}Score: \
-{BMAG}{self.agent.score}{RESET}', YELLOWB)
+{BMAG}{len(snake)}{RESET}', YELLOWB)
         if not is_dead:
             self.master.after(280, lambda: self.agent_loop(new_snake, apples))
         else:
@@ -387,7 +385,7 @@ class Environment:
             self.update_map(self.snake, self.apples)
             self.state = self.get_state(self.snake)
             self.done = False
-            self.score = 0
+            self.score = len(self.snake)
             self.game_over = False
             self.game_states = []
 
@@ -412,8 +410,7 @@ class Environment:
                     'apples': copy.deepcopy(self.apples)
                 })
                 self.done = is_dead
-                if got_apple is not None and got_apple.behavior == 'good':
-                    self.score += 1
+                self.score = len(self.snake)
                 self.i += 1
             self.agent.epsilon = max(self.agent.min_epsilon,
                                      self.agent.epsilon *
@@ -466,7 +463,7 @@ class Environment:
         self.update_map(self.snake, self.apples)
         self.state = self.get_state(self.snake)
         self.done = False
-        self.score = 0
+        self.score = len(self.snake)
         self.game_states = []
         self.train_one_step()
 
@@ -514,7 +511,6 @@ class Environment:
             'apples': copy.deepcopy(self.apples)
         })
 
-        if got_apple and got_apple.behavior == 'good':
-            self.score += 1
+        self.score = len(self.snake)
         self.i += 1
         self.master.after(self.display_speed, self.train_one_step)
